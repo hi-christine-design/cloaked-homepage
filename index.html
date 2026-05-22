@@ -307,10 +307,13 @@
 <p class="hint">Drag across the chart to scrub through time. Tap Week / Month / Year to swap the dataset.</p>
 
 <!-- Hidden haptic trigger: iOS 18+ Safari fires a Taptic-Engine click when an
-     <input type="checkbox" switch> toggles. We programmatically click the label
-     to flip state and emit a haptic. Invisible on every platform; no-op on iOS<18. -->
-<label id="hapticLabel" for="hapticSwitch" aria-hidden="true"
-       style="position:absolute; opacity:0; pointer-events:none; left:-9999px; width:1px; height:1px;">
+     <input type="checkbox" switch> toggles. We programmatically click the
+     INPUT (not the label — more reliable inside pointermove handlers).
+     Note: removed pointer-events:none — iOS Safari skips haptic for elements
+     whose pointer-events are disabled. Element is still visually hidden via
+     opacity:0 and off-screen positioning. -->
+<label for="hapticSwitch" aria-hidden="true"
+       style="position:absolute; opacity:0; left:-9999px; top:0; width:1px; height:1px; overflow:hidden;">
   <input type="checkbox" switch id="hapticSwitch" tabindex="-1" />
 </label>
 
@@ -509,17 +512,17 @@
   // Haptic / vibration. Two paths because no single web API covers both:
   //   • Android Chrome/Firefox  → navigator.vibrate(ms)
   //   • iOS Safari 18+ (incl. homescreen PWA) → toggle a hidden <input switch>;
-  //     Taptic Engine fires on the toggle. Must run inside a user gesture
-  //     (pointermove/click handlers qualify); ignored otherwise.
+  //     Taptic Engine fires on the toggle. Click the INPUT directly (more
+  //     reliable inside pointermove handlers than clicking the label wrapper).
   // Older iOS (<18) and desktop just no-op silently.
-  var _hapticLabel = null;
+  var _hapticInput = null;
   function triggerHaptic(ms){
     if (navigator && typeof navigator.vibrate === 'function'){
       try { navigator.vibrate(ms || 8); } catch(_){}
     }
-    if (!_hapticLabel) _hapticLabel = document.getElementById('hapticLabel');
-    if (_hapticLabel){
-      try { _hapticLabel.click(); } catch(_){}
+    if (!_hapticInput) _hapticInput = document.getElementById('hapticSwitch');
+    if (_hapticInput){
+      try { _hapticInput.click(); } catch(_){}
     }
   }
 
@@ -560,6 +563,9 @@
     if (e.target.closest && e.target.closest('.seg')) return;
     isDown = true;
     try { chartArea.setPointerCapture(e.pointerId); } catch(_){}
+    // Reset tick tracker so the first touch always fires haptic
+    lastTickIdx = -1;
+    triggerHaptic(8); // immediate "touched" tick inside a fresh user gesture
     onPointer(e);
   });
   chartArea.addEventListener('pointermove', function(e){ if (isDown) onPointer(e); });
