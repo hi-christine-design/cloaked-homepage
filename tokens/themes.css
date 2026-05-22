@@ -1,0 +1,111 @@
+/* Cloaked Toolkit — Theme tokens (Light + Dark)
+ * Source of truth: Figma Variables "Theme" collection.
+ * Do not hand-edit; regenerate from Figma export. */
+
+[data-theme="light"] {
+  /* Accent */
+  --ct-brand: var(--ct-color-brand);
+
+  /* Background */
+  --ct-bkgd-01: var(--ct-color-grey-01);
+  --ct-bkgd-02: var(--ct-color-white);
+
+  /* Text */
+  --ct-text-primary: var(--ct-color-grey-05);
+  --ct-text-secondary: var(--ct-color-grey-03);
+
+  /* Divider */
+  --ct-divider: var(--ct-color-black-15);
+
+  /* AI */
+  --ct-text-ai-primary: var(--ct-color-grey-01);
+  --ct-text-ai-secondary: var(--ct-color-grey-02);
+  --ct-bkgd-ai-input: var(--ct-color-black);
+
+  /* Banner */
+  --ct-banner-text-primary: var(--ct-color-grey-05);
+  --ct-banner-text-secondary: var(--ct-color-grey-03);
+  --ct-banner-container: var(--ct-color-grey-02);
+
+  /* CTA / Primary */
+  --ct-cta-primary-text: var(--ct-color-white);
+  --ct-cta-primary-container: var(--ct-color-black);
+
+  /* CTA / Secondary */
+  --ct-cta-secondary-text: var(--ct-color-grey-05);
+  --ct-cta-secondary-container: var(--ct-color-black-15);
+
+  /* Status */
+  --ct-status-success-solid: var(--ct-color-green-01);
+  --ct-status-success-subtle: var(--ct-color-green-02);
+  --ct-status-fail-solid: var(--ct-color-red-01);
+  --ct-status-fail-subtle: var(--ct-color-red-02);
+
+  /* Graph */
+  --ct-graph-background: var(--ct-color-black-05);
+
+  /* Category_TBD */
+  --ct-monitoring: #5936C1;
+  --ct-monitoring-container-01: #411D50;
+  --ct-monitoring-container-02: #291132;
+  --ct-guard: #D78E20;
+  --ct-guard-container-01: #996820;
+  --ct-guard-container-02: #5B3B0D;
+  --ct-identity: #379AAD;
+  --ct-identity-container-01: #193047;
+  --ct-identity-container-02: #0E1F31;
+}
+
+[data-theme="dark"] {
+  /* Accent */
+  --ct-brand: var(--ct-color-brand);
+
+  /* Background */
+  --ct-bkgd-01: var(--ct-color-grey-05);
+  --ct-bkgd-02: var(--ct-color-grey-04);
+
+  /* Text */
+  --ct-text-primary: var(--ct-color-grey-01);
+  --ct-text-secondary: var(--ct-color-grey-03);
+
+  /* Divider */
+  --ct-divider: var(--ct-color-white-15);
+
+  /* AI */
+  --ct-text-ai-primary: var(--ct-color-grey-01);
+  --ct-text-ai-secondary: var(--ct-color-grey-02);
+  --ct-bkgd-ai-input: var(--ct-color-black);
+
+  /* Banner */
+  --ct-banner-text-primary: var(--ct-color-grey-01);
+  --ct-banner-text-secondary: var(--ct-color-grey-02);
+  --ct-banner-container: var(--ct-color-grey-05);
+
+  /* CTA / Primary */
+  --ct-cta-primary-text: var(--ct-color-grey-05);
+  --ct-cta-primary-container: var(--ct-color-grey-01);
+
+  /* CTA / Secondary */
+  --ct-cta-secondary-text: var(--ct-color-grey-01);
+  --ct-cta-secondary-container: var(--ct-color-white-15);
+
+  /* Status */
+  --ct-status-success-solid: var(--ct-color-green-01);
+  --ct-status-success-subtle: var(--ct-color-green-02);
+  --ct-status-fail-solid: var(--ct-color-red-01);
+  --ct-status-fail-subtle: var(--ct-color-red-02);
+
+  /* Graph */
+  --ct-graph-background: var(--ct-color-white-05);
+
+  /* Category_TBD */
+  --ct-monitoring: #5936C1;
+  --ct-monitoring-container-01: #411D50;
+  --ct-monitoring-container-02: #291132;
+  --ct-guard: #D78E20;
+  --ct-guard-container-01: #996820;
+  --ct-guard-container-02: #5B3B0D;
+  --ct-identity: #379AAD;
+  --ct-identity-container-01: #193047;
+  --ct-identity-container-02: #0E1F31;
+}

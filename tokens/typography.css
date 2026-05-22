@@ -1,0 +1,94 @@
+/* Cloaked Toolkit — Typography tokens
+ * Source of truth: Figma Text Styles.
+ * Do not hand-edit; regenerate from Figma export. */
+
+@font-face {
+  font-family: "Simula";
+  src: url("../fonts/Simula-Book.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Simula";
+  src: url("../fonts/Simula-Italic.otf") format("opentype");
+  font-weight: 400;
+  font-style: italic;
+}
+
+:root {
+  /* Font families */
+  --ct-font-sans: -apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif;
+  --ct-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --ct-font-serif: "Simula", Georgia, serif;
+
+  /* Display 1 */
+  --ct-text-display-1-family: var(--ct-font-sans);
+  --ct-text-display-1-weight: 400;
+  --ct-text-display-1-size: 72px;
+  --ct-text-display-1-line-height: 1.1;
+  --ct-text-display-1-letter-spacing: -0.002em;
+
+  /* Display 2 */
+  --ct-text-display-2-family: var(--ct-font-sans);
+  --ct-text-display-2-weight: 400;
+  --ct-text-display-2-size: 48px;
+  --ct-text-display-2-line-height: 1.1;
+  --ct-text-display-2-letter-spacing: -0.002em;
+
+  /* H1 Serif */
+  --ct-text-h1-serif-family: var(--ct-font-serif);
+  --ct-text-h1-serif-weight: 400;
+  --ct-text-h1-serif-size: 32px;
+  --ct-text-h1-serif-line-height: 1;
+  --ct-text-h1-serif-letter-spacing: 0.005em;
+
+  /* H2 Serif */
+  --ct-text-h2-serif-family: var(--ct-font-serif);
+  --ct-text-h2-serif-weight: 400;
+  --ct-text-h2-serif-size: 24px;
+  --ct-text-h2-serif-line-height: 1;
+  --ct-text-h2-serif-letter-spacing: 0.005em;
+
+  /* H1 */
+  --ct-text-h1-family: var(--ct-font-sans);
+  --ct-text-h1-weight: 400;
+  --ct-text-h1-size: 32px;
+  --ct-text-h1-line-height: 1.15;
+  --ct-text-h1-letter-spacing: -0.01em;
+
+  /* H2 */
+  --ct-text-h2-family: var(--ct-font-sans);
+  --ct-text-h2-weight: 400;
+  --ct-text-h2-size: 24px;
+  --ct-text-h2-line-height: 1.15;
+  --ct-text-h2-letter-spacing: -0.005em;
+
+  /* H3 */
+  --ct-text-h3-family: var(--ct-font-sans);
+  --ct-text-h3-weight: 400;
+  --ct-text-h3-size: 20px;
+  --ct-text-h3-line-height: 1.15;
+  --ct-text-h3-letter-spacing: -0.003em;
+
+  /* Body */
+  --ct-text-body-family: var(--ct-font-sans);
+  --ct-text-body-weight: 400;
+  --ct-text-body-size: 16px;
+  --ct-text-body-line-height: 1.1;
+  --ct-text-body-letter-spacing: 0;
+
+  /* Body Small */
+  --ct-text-body-small-family: var(--ct-font-sans);
+  --ct-text-body-small-weight: 400;
+  --ct-text-body-small-size: 14px;
+  --ct-text-body-small-line-height: 1.1;
+  --ct-text-body-small-letter-spacing: 0;
+
+  /* Link */
+  --ct-text-link-family: var(--ct-font-sans);
+  --ct-text-link-weight: 400;
+  --ct-text-link-size: 12px;
+  --ct-text-link-line-height: 1.3;
+  --ct-text-link-letter-spacing: 0.005em;
+}

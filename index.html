@@ -1,584 +1,739 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#ffffff" />
+<meta name="theme-color" content="#141410" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<title>Cloaked — Digital Risk</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Cloaked</title>
+
+<!-- Cloaked Toolkit design tokens (Figma export source of truth) -->
+<link rel="stylesheet" href="tokens/colors.css" />
+<link rel="stylesheet" href="tokens/numbers.css" />
+<link rel="stylesheet" href="tokens/typography.css" />
+<link rel="stylesheet" href="tokens/themes.css" />
+
 <style>
-  :root {
-    --txt-primary: #141410;
-    --bkgd-01: #f3f1ed;
-    --bkgd-02: #ffffff;
-    --cloaked-orange: #ff550c;
-    --banner-bg: #dcd8cf;
-    --banner-text: #84827e;
-    --segment-border: rgba(11,11,10,0.15);
-    --segment-active: #0b0b0a;
-    --text-02: #2a271c;
-    --text-01: #1a1810;
-  }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
-    background: var(--bkgd-01);
-    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
-    font-weight: 400;
-    color: var(--txt-primary);
+    background: var(--ct-color-grey-05);
+    font-family: var(--ct-font-sans);
+    color: var(--ct-text-primary);
     -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
   body {
     min-height: 100vh;
     display: flex; flex-direction: column; align-items: center;
-    padding: 24px 12px 48px;
+    padding: var(--ct-spacing-24) var(--ct-spacing-12) var(--ct-spacing-48);
   }
-  .cloaked-mock {
-    background: var(--bkgd-02);
+  .phone {
     width: 393px;
     max-width: 100%;
-    user-select: none;
-    -webkit-user-select: none;
-    border-radius: 24px;
+    background: var(--ct-bkgd-01);
+    border-radius: var(--ct-spacing-24);
     overflow: hidden;
-    box-shadow: 0 10px 40px rgba(20,20,16,0.08);
-  }
-  .topbar {
-    height: 110px; padding: 96px 16px 24px;
-    display: flex; justify-content: flex-end; align-items: flex-end;
-    font-size: 16px; line-height: 1.3; color: var(--txt-primary);
-  }
-  .title-block {
-    padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px;
-  }
-  .risk-label {
-    margin: 0; font-size: 20px; line-height: 1.2; letter-spacing: 0.1px;
-    color: var(--txt-primary); text-transform: capitalize;
-  }
-  .risk-level {
-    margin: 0; font-size: 48px; line-height: 1; letter-spacing: -0.96px;
-    transition: color 0.18s ease;
-  }
-  .risk-meta {
-    margin: 0; font-size: 14px; line-height: 1.2; color: var(--banner-text);
-  }
-  .risk-meta b { font-weight: 500; color: var(--txt-primary); }
-  .chart-area {
-    position: relative; width: 100%; height: 334px; overflow: hidden;
-    cursor: ew-resize; touch-action: pan-y;
-  }
-  .inner-stack {
-    position: absolute; left: 0; top: 0; width: 394px;
-    padding: 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 24px;
-  }
-  .axis-row {
-    display: flex; justify-content: space-between; align-items: flex-end;
-    height: 238px; width: 354px;
-  }
-  .axis-col {
-    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-    gap: 16px; height: 238px;
-  }
-  .axis-line { width: 1px; height: 214px; background: rgba(20,20,16,0.15); }
-  .axis-label {
-    font-size: 12px; line-height: 1.3; letter-spacing: 0.06px;
-    color: var(--txt-primary); opacity: 0.6; text-align: center;
-  }
-  .segment-row { display: flex; gap: 16px; align-items: center; width: 354px; }
-  .seg {
-    flex: 1; padding: 12px 10px; border-radius: 16px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; line-height: 1.3; letter-spacing: 0.06px;
-    cursor: pointer;
-    border: 1px solid var(--segment-border);
-    background: transparent; color: var(--txt-primary);
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-  .seg.active {
-    background: var(--segment-active); color: #ffffff; border-color: var(--segment-active);
-  }
-  .scrub-line {
-    position: absolute; top: 20px; height: 214px; width: 1px;
-    background: rgba(20,20,16,0.45); pointer-events: none;
-    transition: left 0.04s linear;
-  }
-  .axis-row, .chart-svg {
-    transform-origin: 50% 50%;
-    will-change: transform, opacity;
-  }
-  .chart-anim {
-    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease-out;
-  }
-  .date-label {
-    position: absolute; top: 4px; transform: translateX(-50%);
-    font-size: 13px; line-height: 1.2; color: var(--txt-primary);
-    background: rgba(243,241,237,0.92);
-    padding: 3px 8px; border-radius: 8px;
-    pointer-events: none; white-space: nowrap;
-  }
-  .chart-svg {
-    position: absolute; left: -16px; top: 42px; width: 389px; height: 181px;
-    pointer-events: none; overflow: visible;
-  }
-  .banner {
-    margin: 24px 16px 0; background: var(--banner-bg);
-    display: flex; gap: 16px; padding: 16px; border-radius: 20px;
-  }
-  .banner-title {
-    margin: 0 0 8px; font-size: 14px; line-height: 1.2; letter-spacing: 0.07px;
-    color: var(--txt-primary);
-  }
-  .banner-body {
-    margin: 0; font-size: 16px; line-height: 1.3; color: var(--banner-text);
-  }
-  .detail-section {
-    background: var(--bkgd-01);
-    padding: 20px 0; margin-top: 24px;
-    display: flex; flex-direction: column; align-items: center;
-  }
-  .detail-list {
-    display: flex; flex-direction: column; gap: 8px; width: 353px;
-  }
-  .detail-card {
-    position: relative; height: 98px; background: #ffffff; border-radius: 8px; overflow: hidden;
-  }
-  .detail-inner {
-    position: absolute; left: 16px; top: 26px;
-    display: flex; flex-direction: column; gap: 4px; width: 254px;
-  }
-  .detail-label {
-    margin: 0; font-size: 16px; line-height: 1.1; color: var(--text-02);
-  }
-  .detail-value {
-    margin: 0; font-size: 20px; line-height: 1; color: var(--text-01);
-  }
-  .detail-sites {
-    position: absolute; right: 16px; top: 26px;
-    font-size: 12px; line-height: 1.1; color: var(--cloaked-orange);
-  }
-  .hint {
-    font-size: 12px; text-align: center; color: var(--banner-text);
-    margin: 16px 0 0; max-width: 393px;
+    box-shadow: 0 10px 40px rgba(20,20,16,0.18);
+    position: relative;
   }
 
-  /* Mobile: edge-to-edge, white under iOS status bar */
+  /* === HERO === */
+  .hero {
+    position: relative;
+    background: var(--ct-color-grey-05);
+    color: var(--ct-text-ai-primary);
+    padding: 100px var(--ct-spacing-20) var(--ct-spacing-24);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .hero::before {
+    /* Orange radial glow positioned top-right, per Figma "Orange" ellipse */
+    content: '';
+    position: absolute;
+    width: 421px; height: 421px;
+    right: -14px; top: -260px;
+    border-radius: 50%;
+    background: radial-gradient(circle at center,
+      rgba(255,85,12,0.6) 0%,
+      rgba(184,49,0,0.35) 35%,
+      transparent 70%);
+    z-index: -1;
+    filter: blur(2px);
+  }
+  .hero-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 24px;
+  }
+  .hero-logo {
+    font-family: var(--ct-font-sans);
+    font-size: 17px;
+    line-height: 1.2;
+    color: var(--ct-color-grey-01);
+    letter-spacing: 0.2px;
+  }
+  .hero-menu {
+    width: 24px; height: 24px;
+    display: flex; flex-direction: column; justify-content: center; gap: 5px;
+    cursor: pointer;
+  }
+  .hero-menu span {
+    display: block; height: 1.5px; background: var(--ct-color-grey-01);
+    border-radius: 1px;
+  }
+  .hero-menu span:nth-child(1) { width: 100%; }
+  .hero-menu span:nth-child(2) { width: 70%; align-self: flex-end; }
+
+  .hero-greeting {
+    font-family: var(--ct-font-serif);
+    font-weight: var(--ct-text-h1-serif-weight);
+    font-size: var(--ct-text-h1-serif-size);
+    line-height: var(--ct-text-h1-serif-line-height);
+    letter-spacing: var(--ct-text-h1-serif-letter-spacing);
+    color: var(--ct-color-grey-01);
+    margin: 54px 0 0;
+    max-width: 344px;
+  }
+  .hero-greeting .dim { color: var(--ct-color-grey-03); }
+
+  .spam-card {
+    margin-top: 24px;
+    background: rgba(255,255,255,0.06);
+    border: 0.5px solid var(--ct-color-white-15);
+    border-radius: var(--ct-spacing-20);
+    padding: 19px var(--ct-spacing-24);
+    width: 353px;
+    max-width: 100%;
+    display: flex; align-items: center; gap: var(--ct-spacing-16);
+    backdrop-filter: blur(12px);
+    cursor: pointer;
+  }
+  .spam-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--ct-brand);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .spam-icon svg { width: 22px; height: 22px; }
+  .spam-text { display: flex; flex-direction: column; }
+  .spam-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-color-grey-01);
+  }
+  .spam-sub {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-color-grey-03);
+    margin-top: 2px;
+  }
+
+  /* === DASHBOARD === */
+  .dashboard {
+    background: var(--ct-bkgd-01);
+    padding: 0 var(--ct-spacing-20) var(--ct-spacing-16);
+  }
+  .dashboard-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 27px 0 24px;
+  }
+  .dashboard-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .dashboard-edit {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    cursor: pointer;
+    background: none; border: none; padding: 0;
+  }
+
+  /* Card base */
+  .card {
+    background: var(--ct-bkgd-02);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: var(--ct-spacing-8);
+    width: 353px;
+    max-width: 100%;
+  }
+  a.card { text-decoration: none; color: inherit; display: block; }
+  .card-body { padding: 20px var(--ct-spacing-16) 0; }
+  .card-link {
+    display: block;
+    border-top: 0.5px solid var(--ct-divider);
+    padding: var(--ct-spacing-20) 0;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-link-size);
+    line-height: var(--ct-text-link-line-height);
+    letter-spacing: var(--ct-text-link-letter-spacing);
+    color: var(--ct-text-primary);
+    text-align: center;
+    cursor: pointer;
+    margin-top: var(--ct-spacing-20);
+  }
+
+  /* Digital risk card */
+  .risk-card { position: relative; }
+  .risk-row {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .risk-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .risk-value {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: #c90004;
+    text-align: right;
+  }
+  .risk-bar {
+    position: relative;
+    width: 100%;
+    height: 16px;
+    margin-top: 21px;
+    margin-bottom: 0;
+  }
+  .risk-bar-track {
+    position: absolute; left: 0; top: 2px;
+    width: 100%; height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg,
+      #6cb84a 0%, #d4ce2c 40%, #e8b800 60%, #ff550c 85%, #b83100 100%);
+    opacity: 0.25;
+  }
+  .risk-bar-fill {
+    position: absolute; left: 0; top: 2px;
+    width: 84%; height: 12px;
+    border-radius: 6px;
+    background: linear-gradient(90deg,
+      #6cb84a 0%, #d4ce2c 50%, #e8b800 75%, #ff550c 95%, #b83100 100%);
+  }
+  .risk-bar-dot {
+    position: absolute; top: 0;
+    left: calc(84% - 8px);
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--ct-color-white);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .risk-bar-dot::after {
+    content: '';
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: #b83100;
+  }
+  /* Glow behind "High" value */
+  .risk-glow {
+    position: absolute;
+    right: 6px; top: 5px;
+    width: 76px; height: 76px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(184,49,0,0.18) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Actions card */
+  .actions-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    margin: 0 0 24px;
+  }
+  .actions-headline {
+    display: flex; align-items: center; gap: var(--ct-spacing-12);
+    margin-bottom: 37px;
+  }
+  .actions-number {
+    font-family: var(--ct-font-sans);
+    font-weight: 400;
+    font-size: 34px;
+    line-height: 1;
+    letter-spacing: -0.5px;
+    color: var(--ct-text-primary);
+  }
+  .actions-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--ct-status-success-subtle);
+    color: var(--ct-status-success-solid);
+    padding: 6px var(--ct-spacing-12);
+    border-radius: 999px;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-link-size);
+    line-height: 1;
+  }
+  .actions-pill svg { width: 8px; height: 8px; }
+  .actions-list { display: flex; flex-direction: column; }
+  .actions-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 0;
+    border-top: 0.5px solid var(--ct-divider);
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .actions-row:first-child { border-top: none; padding-top: 0; }
+  .actions-row span:last-child { color: var(--ct-text-primary); }
+
+  /* Recent activity */
+  .activity-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    margin: 0;
+  }
+  .activity-section {
+    border-top: 0.5px solid var(--ct-divider);
+    padding: var(--ct-spacing-20) 0;
+  }
+  .activity-section:first-of-type {
+    margin-top: var(--ct-spacing-24);
+  }
+  .activity-section-label {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    margin: 0 0 var(--ct-spacing-16);
+  }
+  .activity-row {
+    display: flex; align-items: flex-start; gap: var(--ct-spacing-12);
+  }
+  .activity-row + .activity-row { margin-top: 24px; }
+  .activity-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-family: var(--ct-font-sans);
+    font-size: 14px;
+    background: var(--ct-color-grey-02);
+  }
+  .activity-icon.red {
+    background: linear-gradient(135deg, #ff550c, #b83100);
+  }
+  .activity-icon.green {
+    background: linear-gradient(135deg, #6cb84a, #008924);
+  }
+  .activity-icon.dark {
+    background: var(--ct-color-grey-05); color: var(--ct-color-grey-01);
+  }
+  .activity-icon svg { width: 18px; height: 18px; }
+  .activity-content { flex: 1; min-width: 0; }
+  .activity-content-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: var(--ct-spacing-12);
+  }
+  .activity-name {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .activity-status {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    margin-top: 4px;
+  }
+  .activity-meta {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    flex-shrink: 0;
+  }
+  .activity-progress {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--ct-color-black-05);
+    margin-top: var(--ct-spacing-12);
+    overflow: hidden;
+  }
+  .activity-progress span {
+    display: block; height: 100%;
+    background: var(--ct-brand);
+    border-radius: 3px;
+  }
+
+  /* Add to dashboard */
+  .add-card {
+    background: var(--ct-bkgd-02);
+    border-radius: 16px;
+    padding: 24px 16px;
+    text-align: center;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    cursor: pointer;
+    width: 353px;
+    max-width: 100%;
+  }
+
+  /* === ASK AI === */
+  .ask-ai {
+    background: var(--ct-color-grey-05);
+    color: var(--ct-text-ai-primary);
+    padding: var(--ct-spacing-24) 0 var(--ct-spacing-32);
+  }
+  .ask-ai-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 var(--ct-spacing-20) 24px;
+  }
+  .ask-ai-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-ai-primary);
+  }
+  .ask-ai-filter {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-ai-secondary);
+    background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .ai-scroll {
+    display: flex; gap: var(--ct-spacing-12);
+    overflow-x: auto;
+    padding: 0 var(--ct-spacing-16);
+    scrollbar-width: none;
+  }
+  .ai-scroll::-webkit-scrollbar { display: none; }
+  .ai-card {
+    flex: 0 0 233px;
+    height: 274px;
+    background: var(--ct-bkgd-ai-input);
+    border-radius: 16px;
+    padding: var(--ct-spacing-16);
+    display: flex; flex-direction: column; justify-content: space-between;
+    cursor: pointer;
+  }
+  .ai-tag {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-brand);
+  }
+  .ai-question {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-h3-size);
+    line-height: var(--ct-text-h3-line-height);
+    letter-spacing: var(--ct-text-h3-letter-spacing);
+    color: var(--ct-text-ai-primary);
+    margin: 10px 0 0;
+  }
+  .ai-arrow {
+    width: 43px; height: 43px;
+    border-radius: 50%;
+    background: var(--ct-color-white-15);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ct-color-grey-01);
+  }
+  .ai-arrow svg { width: 14px; height: 14px; }
+
+  /* === TAB BAR === */
+  .tabbar {
+    background: var(--ct-color-grey-05);
+    display: flex; justify-content: space-around; align-items: center;
+    padding: var(--ct-spacing-16) var(--ct-spacing-16) var(--ct-spacing-24);
+    border-top: 0.5px solid var(--ct-color-white-15);
+  }
+  .tab {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ct-color-grey-01);
+    opacity: 0.5;
+    cursor: pointer;
+  }
+  .tab.active { opacity: 1; }
+  .tab svg { width: 24px; height: 24px; }
+
+  /* === MOBILE: edge-to-edge, trim baked-in 54px ===
+     Figma bakes ~54px of iOS status-bar space into the design's top padding.
+     On real devices iOS adds env(safe-area-inset-top) on top of that, doubling.
+     We drop the baked-in chunk on mobile and let safe-area handle the gap. */
   @media (max-width: 480px) {
-    html, body {
-      background: var(--bkgd-02);
-    }
     body {
       padding: 0;
       min-height: 100vh;
       min-height: 100dvh;
+      background: var(--ct-color-grey-05);
     }
-    .cloaked-mock {
+    .phone {
       width: 100%;
       max-width: 100%;
       border-radius: 0;
       box-shadow: none;
     }
-    .topbar {
-      /* Push 'Close' below the iOS status bar / notch */
-      padding-top: calc(env(safe-area-inset-top, 0px) + 54px);
-      padding-left: calc(env(safe-area-inset-left, 0px) + 16px);
-      padding-right: calc(env(safe-area-inset-right, 0px) + 16px);
-      height: auto;
-      min-height: 96px;
+    .hero {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 46px);
+      padding-left: calc(env(safe-area-inset-left, 0px) + var(--ct-spacing-20));
+      padding-right: calc(env(safe-area-inset-right, 0px) + var(--ct-spacing-20));
     }
-    .detail-section {
-      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
-    }
-    .hint {
-      padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+    .tabbar {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--ct-spacing-16));
     }
   }
 </style>
 </head>
 <body>
 
-<div class="cloaked-mock" id="cloakedMock">
-  <div class="topbar">Close</div>
+<div class="phone">
 
-  <div class="title-block">
-    <p class="risk-label">Digital Risk</p>
-    <p class="risk-level" id="riskLevel" style="color:#b83100;">High</p>
-    <p class="risk-meta"><b id="siteCount">92</b> sites exposed &nbsp;·&nbsp; <span id="trendText">&#9650; 37 since Jan</span></p>
-  </div>
-
-  <div class="chart-area" id="chartArea">
-    <div class="inner-stack">
-      <div class="axis-row" id="axisRow"></div>
-      <div class="segment-row">
-        <div class="seg" data-view="week">Week</div>
-        <div class="seg" data-view="month">Month</div>
-        <div class="seg active" data-view="year">Year</div>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bar">
+      <span class="hero-logo">Cloaked</span>
+      <div class="hero-menu" aria-label="Menu">
+        <span></span><span></span>
       </div>
     </div>
 
-    <div class="date-label" id="dateLabel" style="left: 374px;">Dec 15, 2026</div>
-    <div class="scrub-line" id="scrubLine" style="left: 374px;"></div>
+    <h1 class="hero-greeting">
+      Christine, <span class="dim">start here. biggest difference.</span>
+    </h1>
 
-    <svg class="chart-svg" id="chartSvg" viewBox="0 0 389 181" preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#ff550c"/>
-          <stop offset="50%" stop-color="#e8b800"/>
-          <stop offset="100%" stop-color="#6cb84a"/>
-        </linearGradient>
-        <radialGradient id="haloGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#ff550c" stop-opacity="0.35"/>
-          <stop offset="100%" stop-color="#ff550c" stop-opacity="0"/>
-        </radialGradient>
-        <clipPath id="scrubClip">
-          <rect id="clipRect" x="0" y="-20" width="390" height="220"/>
-        </clipPath>
-      </defs>
-      <polyline id="lineFaded" points="" fill="none" stroke="url(#riskGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.25"/>
-      <polyline id="lineBold" points="" fill="none" stroke="url(#riskGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#scrubClip)"/>
-      <circle id="haloCircle" cx="390" cy="11" r="22" fill="url(#haloGrad)"/>
-      <circle id="scrubDot" cx="390" cy="11" r="6" fill="#b83100"/>
-    </svg>
-  </div>
-
-  <div class="banner">
-    <div>
-      <p class="banner-title">From team</p>
-      <p class="banner-body">Your data exposure has been increasing again recently. This may happen when using public Wi-Fi. Consider turning on a VPN when on public networks.</p>
-    </div>
-  </div>
-
-  <div class="detail-section">
-    <div class="detail-list">
-      <div class="detail-card">
-        <div class="detail-inner">
-          <p class="detail-label">Your Name</p>
-          <p class="detail-value">Christine Yun</p>
-        </div>
-        <span class="detail-sites">2 sites</span>
+    <div class="spam-card">
+      <div class="spam-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6.62 10.79a15 15 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.24.2 2.45.57 3.57a1 1 0 0 1-.24 1.02l-2.21 2.2z"
+                fill="#fff"/>
+        </svg>
       </div>
-      <div class="detail-card">
-        <div class="detail-inner">
-          <p class="detail-label">SSN</p>
-          <p class="detail-value">***-**- 4382</p>
-        </div>
-        <span class="detail-sites">8 sites</span>
-      </div>
-      <div class="detail-card">
-        <div class="detail-inner">
-          <p class="detail-label">Phone Number</p>
-          <p class="detail-value">123-456-7890</p>
-        </div>
-        <span class="detail-sites">8 Sites</span>
-      </div>
-      <div class="detail-card">
-        <div class="detail-inner">
-          <p class="detail-label">Email</p>
-          <p class="detail-value">Tester's Email</p>
-        </div>
-        <span class="detail-sites">8 Sites</span>
-      </div>
-      <div class="detail-card">
-        <div class="detail-inner">
-          <p class="detail-label">Address</p>
-          <p class="detail-value">Tester's Address</p>
-        </div>
-        <span class="detail-sites">10 Sites</span>
-      </div>
-      <div class="detail-card">
-        <div class="detail-inner">
-          <p class="detail-label">Birthday</p>
-          <p class="detail-value">09/22/1980</p>
-        </div>
-        <span class="detail-sites">10 Sites</span>
-      </div>
-      <div class="detail-card">
-        <div class="detail-inner">
-          <p class="detail-label">Family &amp; Friends</p>
-          <p class="detail-value">Tester's family name</p>
-        </div>
-        <span class="detail-sites">10 Sites</span>
+      <div class="spam-text">
+        <span class="spam-title">Block spam calls</span>
+        <span class="spam-sub">Peace in 30 seconds</span>
       </div>
     </div>
-  </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="dashboard">
+    <header class="dashboard-header">
+      <span class="dashboard-title">Dashboard</span>
+      <button class="dashboard-edit">Edit</button>
+    </header>
+
+    <!-- Digital risk -->
+    <a class="card risk-card" href="digital-risk.html">
+      <div class="card-body">
+        <div class="risk-row">
+          <span class="risk-title">Digital risk</span>
+          <span class="risk-value">High</span>
+        </div>
+        <div class="risk-bar" aria-hidden="true">
+          <div class="risk-bar-track"></div>
+          <div class="risk-bar-fill"></div>
+          <div class="risk-bar-dot"></div>
+        </div>
+        <div class="risk-glow" aria-hidden="true"></div>
+      </div>
+      <div class="card-link">See details</div>
+    </a>
+
+    <!-- Actions -->
+    <div class="card">
+      <div class="card-body">
+        <p class="actions-title">Actions taken to protect you</p>
+        <div class="actions-headline">
+          <span class="actions-number">4,216</span>
+          <span class="actions-pill">
+            <svg viewBox="0 0 8 7" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 0l4 7H0z" fill="currentColor"/>
+            </svg>
+            18 today
+          </span>
+        </div>
+        <div class="actions-list">
+          <div class="actions-row"><span>Data removed</span><span>3,840</span></div>
+          <div class="actions-row"><span>Spam blocked</span><span>1,460</span></div>
+          <div class="actions-row"><span>Identity created</span><span>16</span></div>
+        </div>
+      </div>
+      <div class="card-link">See details</div>
+    </div>
+
+    <!-- Recent activity -->
+    <div class="card">
+      <div class="card-body">
+        <p class="activity-title">Recent activity</p>
+
+        <div class="activity-section">
+          <div class="activity-section-label">In Progress</div>
+
+          <div class="activity-row">
+            <div class="activity-icon red">L</div>
+            <div class="activity-content">
+              <div class="activity-content-row">
+                <div>
+                  <div class="activity-name">Removal sending to Lexi</div>
+                  <div class="activity-status">In Progress</div>
+                </div>
+              </div>
+              <div class="activity-progress"><span style="width:62%"></span></div>
+            </div>
+          </div>
+
+          <div class="activity-row">
+            <div class="activity-icon green">B</div>
+            <div class="activity-content">
+              <div class="activity-content-row">
+                <div>
+                  <div class="activity-name">Removal sending to BeenVerified</div>
+                  <div class="activity-status">In Progress</div>
+                </div>
+              </div>
+              <div class="activity-progress"><span style="width:38%"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="activity-section">
+          <div class="activity-section-label">Up Next</div>
+          <div class="activity-row">
+            <div class="activity-icon dark">
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="activity-content">
+              <div class="activity-content-row">
+                <div>
+                  <div class="activity-name">Next scan</div>
+                  <div class="activity-status">In Progress</div>
+                </div>
+                <span class="activity-meta">Jun 21</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-link">See all activities</div>
+    </div>
+
+    <!-- Add to dashboard -->
+    <div class="add-card">+ Add to dashboard</div>
+  </section>
+
+  <!-- ASK AI -->
+  <section class="ask-ai">
+    <header class="ask-ai-header">
+      <span class="ask-ai-title">Ask AI</span>
+      <button class="ask-ai-filter">All ▾</button>
+    </header>
+    <div class="ai-scroll">
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Call Guard</div>
+          <p class="ai-question">How much data have you removed for me?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Safety</div>
+          <p class="ai-question">How does my score compare to others?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Understanding How</div>
+          <p class="ai-question">How do you know about my data?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Urgency</div>
+          <p class="ai-question">Can I fix this today?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Trusting Cloaked</div>
+          <p class="ai-question">Who else can see my information?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB BAR -->
+  <nav class="tabbar">
+    <div class="tab active" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V11z" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Stats">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 20V10M10 20V4M16 20v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Identities">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="4" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="3" y="14" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Protection">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Vault">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="11" width="16" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </div>
+  </nav>
+
 </div>
 
-<p class="hint">Drag across the chart to scrub through time. Tap Week / Month / Year to swap the dataset.</p>
-
-<!-- iOS Safari 17.4+ haptic: dynamically created in JS each tick. See triggerHaptic(). -->
-
-<script>
-(function(){
-  var datasets = {
-    year: {
-      labels: ['J','F','M','A','M','J','J','A','S','O','N','D'],
-      values: [55, 38, 18, 35, 42, 40, 48, 45, 48, 45, 50, 92],
-      trend: function(v){
-        var d = Math.round(v - 55);
-        return (d >= 0 ? '▲ ' : '▼ ') + Math.abs(d) + ' since Jan';
-      },
-      dateAt: function(scrubX){
-        var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
-        var day = Math.round(t * 364) + 1;
-        var d = new Date(2026, 0, day);
-        var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return m[d.getMonth()] + ' ' + d.getDate() + ', 2026';
-      }
-    },
-    month: {
-      labels: ['1','8','15','22','29'],
-      values: [48, 50, 47, 52, 48, 55, 50, 58, 55, 62, 65, 68, 72, 78, 92],
-      trend: function(v){
-        var d = Math.round(v - 48);
-        return (d >= 0 ? '▲ ' : '▼ ') + Math.abs(d) + ' since May 1';
-      },
-      dateAt: function(scrubX){
-        var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
-        var day = Math.round(t * 28) + 1;
-        return 'May ' + day + ', 2026';
-      }
-    },
-    week: {
-      labels: ['M','T','W','T','F','S','S'],
-      values: [55, 60, 50, 58, 75, 85, 92],
-      trend: function(v){
-        var d = Math.round(v - 55);
-        return (d >= 0 ? '▲ ' : '▼ ') + Math.abs(d) + ' since Mon';
-      },
-      dateAt: function(scrubX){
-        var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
-        var i = Math.round(t * 6);
-        return ['Mon, May 18','Tue, May 19','Wed, May 20','Thu, May 21','Fri, May 22','Sat, May 23','Sun, May 24'][i];
-      }
-    }
-  };
-
-  var currentView = 'year';
-  var scrubX = 390;
-  var lastTickIdx = -1; // tracks discrete data-point boundary for haptic ticks
-
-  function levelFromValue(v){
-    if (v >= 70) return { word: 'High',   color: '#b83100' };
-    if (v >= 40) return { word: 'Medium', color: '#ba7517' };
-    return                 { word: 'Low',    color: '#639922' };
-  }
-
-  function valueToY(v){ return 170 - v * 1.55; }
-
-  function getPoints(view){
-    var ds = datasets[view];
-    var n = ds.values.length;
-    var pts = [];
-    for (var i = 0; i < n; i++){
-      var x = 36 + (i / (n - 1)) * 354;
-      pts.push([x, valueToY(ds.values[i])]);
-    }
-    return pts;
-  }
-
-  function interpY(pts, x){
-    if (x <= pts[0][0]) return pts[0][1];
-    if (x >= pts[pts.length-1][0]) return pts[pts.length-1][1];
-    for (var i = 0; i < pts.length-1; i++){
-      if (x >= pts[i][0] && x <= pts[i+1][0]){
-        var t = (x - pts[i][0]) / (pts[i+1][0] - pts[i][0]);
-        return pts[i][1] + (pts[i+1][1] - pts[i][1]) * t;
-      }
-    }
-    return pts[pts.length-1][1];
-  }
-
-  function valueAt(view, x){
-    var ds = datasets[view];
-    var n = ds.values.length;
-    var t = Math.max(0, Math.min(1, (x - 36) / 354));
-    var pos = t * (n - 1);
-    var i = Math.floor(pos);
-    if (i >= n - 1) return ds.values[n-1];
-    var f = pos - i;
-    return ds.values[i] + (ds.values[i+1] - ds.values[i]) * f;
-  }
-
-  function renderAxis(){
-    var ds = datasets[currentView];
-    var html = '';
-    for (var i = 0; i < ds.labels.length; i++){
-      html += '<div class="axis-col"><div class="axis-line"></div><span class="axis-label">' + ds.labels[i] + '</span></div>';
-    }
-    document.getElementById('axisRow').innerHTML = html;
-  }
-
-  function renderLines(){
-    var pts = getPoints(currentView);
-    var s = pts.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' ');
-    document.getElementById('lineFaded').setAttribute('points', s);
-    document.getElementById('lineBold').setAttribute('points', s);
-  }
-
-  function updateScrubber(){
-    var ds = datasets[currentView];
-    var v = valueAt(currentView, scrubX);
-    var pts = getPoints(currentView);
-    var y = interpY(pts, scrubX);
-    var lvl = levelFromValue(v);
-
-    document.getElementById('riskLevel').textContent = lvl.word;
-    document.getElementById('riskLevel').style.color = lvl.color;
-    document.getElementById('siteCount').textContent = Math.round(v);
-    document.getElementById('trendText').textContent = ds.trend(v);
-
-    document.getElementById('haloCircle').setAttribute('cx', scrubX);
-    document.getElementById('haloCircle').setAttribute('cy', y);
-    document.getElementById('scrubDot').setAttribute('cx', scrubX);
-    document.getElementById('scrubDot').setAttribute('cy', y);
-    document.getElementById('scrubDot').setAttribute('fill', lvl.color);
-    document.getElementById('clipRect').setAttribute('width', scrubX);
-
-    var containerX = scrubX - 16;
-    document.getElementById('scrubLine').style.left = containerX + 'px';
-    var dateLabel = document.getElementById('dateLabel');
-    dateLabel.style.left = Math.max(40, Math.min(353, containerX)) + 'px';
-    dateLabel.textContent = ds.dateAt(scrubX);
-
-    // Haptic tick when crossing a discrete data-point boundary
-    var n = ds.values.length;
-    var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
-    var tickIdx = Math.round(t * (n - 1));
-    if (tickIdx !== lastTickIdx){
-      lastTickIdx = tickIdx;
-      triggerHaptic(6);
-    }
-  }
-
-  var viewOrder = { week: 0, month: 1, year: 2 };
-
-  function setView(v){
-    if (v === currentView) return;
-
-    var isExpanding = viewOrder[v] > viewOrder[currentView];
-    // Expand: new chart starts compressed, settles to full width.
-    // Squeeze: new chart starts stretched, settles to full width.
-    var startScale = isExpanding ? 0.72 : 1.32;
-
-    currentView = v;
-    var segs = document.querySelectorAll('#cloakedMock .seg');
-    for (var i = 0; i < segs.length; i++){
-      if (segs[i].getAttribute('data-view') === v) segs[i].classList.add('active');
-      else segs[i].classList.remove('active');
-    }
-
-    var axisRow = document.getElementById('axisRow');
-    var chartSvg = document.getElementById('chartSvg');
-
-    // Snap to start state with no transition
-    axisRow.classList.remove('chart-anim');
-    chartSvg.classList.remove('chart-anim');
-    axisRow.style.transform = 'scaleX(' + startScale + ')';
-    chartSvg.style.transform = 'scaleX(' + startScale + ')';
-    axisRow.style.opacity = '0.35';
-    chartSvg.style.opacity = '0.4';
-
-    // Update data
-    renderAxis();
-    renderLines();
-    scrubX = 390;
-    updateScrubber();
-
-    // Force reflow, then transition to settled state
-    void axisRow.offsetWidth;
-    requestAnimationFrame(function(){
-      axisRow.classList.add('chart-anim');
-      chartSvg.classList.add('chart-anim');
-      axisRow.style.transform = 'scaleX(1)';
-      chartSvg.style.transform = 'scaleX(1)';
-      axisRow.style.opacity = '1';
-      chartSvg.style.opacity = '1';
-    });
-
-    // Small haptic tick on segment change too
-    triggerHaptic(12);
-  }
-
-  // Haptic / vibration. Two paths because no single web API covers both:
-  //   • Android Chrome/Firefox  → navigator.vibrate(ms)
-  //   • iOS Safari 17.4+ (incl. homescreen PWA) → mount a fresh
-  //     <input type="checkbox" switch> + <label>, click the label to toggle,
-  //     then remove on next frame. iOS fires the Taptic Engine on toggle.
-  //     A NEW element per call is required — reusing one gets throttled
-  //     during rapid scrubbing. Pattern matches the `ios-haptics` library.
-  function triggerHaptic(ms){
-    if (navigator && typeof navigator.vibrate === 'function'){
-      try { navigator.vibrate(ms || 8); } catch(_){}
-    }
-    try {
-      var id = '_h' + Date.now() + Math.floor(Math.random() * 1e6);
-      var label = document.createElement('label');
-      label.setAttribute('for', id);
-      label.setAttribute('aria-hidden', 'true');
-      label.style.cssText = 'position:absolute;opacity:0;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none;';
-      var input = document.createElement('input');
-      input.type = 'checkbox';
-      input.id = id;
-      input.setAttribute('switch', '');
-      input.tabIndex = -1;
-      label.appendChild(input);
-      document.body.appendChild(label);
-      label.click();
-      // Defer cleanup so the click + haptic actually register before removal.
-      requestAnimationFrame(function(){
-        try { label.remove(); } catch(_){}
-      });
-    } catch(_){}
-  }
-
-  renderAxis();
-  renderLines();
-  updateScrubber();
-
-  var segs = document.querySelectorAll('#cloakedMock .seg');
-  for (var i = 0; i < segs.length; i++){
-    (function(el){
-      el.addEventListener('click', function(e){
-        e.stopPropagation();
-        setView(el.getAttribute('data-view'));
-      });
-    })(segs[i]);
-  }
-
-  var chartArea = document.getElementById('chartArea');
-  var chartSvg = document.getElementById('chartSvg');
-  var isDown = false;
-
-  function pointerToSvgX(clientX){
-    var rect = chartSvg.getBoundingClientRect();
-    var relX = clientX - rect.left;
-    var sx = (relX / rect.width) * 389;
-    return Math.max(36, Math.min(390, sx));
-  }
-
-  function onPointer(e){
-    if (e.target.closest && e.target.closest('.seg')) return;
-    var cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
-    if (typeof cx !== 'number') return;
-    scrubX = pointerToSvgX(cx);
-    updateScrubber();
-  }
-
-  chartArea.addEventListener('pointerdown', function(e){
-    if (e.target.closest && e.target.closest('.seg')) return;
-    isDown = true;
-    try { chartArea.setPointerCapture(e.pointerId); } catch(_){}
-    // Reset tick tracker so the first touch always fires haptic
-    lastTickIdx = -1;
-    triggerHaptic(8); // immediate "touched" tick inside a fresh user gesture
-    onPointer(e);
-  });
-  chartArea.addEventListener('pointermove', function(e){ if (isDown) onPointer(e); });
-  chartArea.addEventListener('pointerup', function(){ isDown = false; });
-  chartArea.addEventListener('pointercancel', function(){ isDown = false; });
-  chartArea.addEventListener('pointerleave', function(){ isDown = false; });
-})();
-</script>
 </body>
 </html>

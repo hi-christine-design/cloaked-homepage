@@ -1,0 +1,22 @@
+/* Cloaked Toolkit — Color primitives
+ * Source of truth: Figma Variables "Colors" collection.
+ * Do not hand-edit; regenerate from Figma export. */
+
+:root {
+  --ct-color-white: #FFFFFF;
+  --ct-color-grey-01: #F3F1ED;
+  --ct-color-grey-02: #DCD8CF;
+  --ct-color-grey-03: #84827E;
+  --ct-color-grey-04: #1B1B18;
+  --ct-color-grey-05: #141410;
+  --ct-color-black: #0B0B0A;
+  --ct-color-brand: #FF550C;
+  --ct-color-green-01: #008924;
+  --ct-color-green-02: #0089241A; /* 10% */
+  --ct-color-red-01: #B83100;
+  --ct-color-red-02: #B831001A; /* 10% */
+  --ct-color-white-05: #FFFFFF0D; /* 5% */
+  --ct-color-white-15: #FFFFFF26; /* 15% */
+  --ct-color-black-05: #0B0B0A0D; /* 5% */
+  --ct-color-black-15: #0B0B0A26; /* 15% */
+}

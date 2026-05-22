@@ -1,0 +1,26 @@
+/* Cloaked Toolkit — Number tokens (Spacing + Opacity)
+ * Source of truth: Figma Variables "Numbers" collection.
+ * Do not hand-edit; regenerate from Figma export. */
+
+:root {
+  /* Spacing */
+  --ct-spacing-4: 4px;
+  --ct-spacing-8: 8px;
+  --ct-spacing-12: 12px;
+  --ct-spacing-16: 16px;
+  --ct-spacing-20: 20px;
+  --ct-spacing-24: 24px;
+  --ct-spacing-32: 32px;
+  --ct-spacing-40: 40px;
+  --ct-spacing-48: 48px;
+  --ct-spacing-56: 56px;
+  --ct-spacing-64: 64px;
+  --ct-spacing-72: 72px;
+  --ct-spacing-80: 80px;
+  --ct-spacing-96: 96px;
+  --ct-spacing-120: 120px;
+  --ct-spacing-240: 240px;
+
+  /* Opacity */
+  --ct-opacity-disabled: 0.3;
+}
