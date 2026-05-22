@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<title>Cloaked — Actions taken</title>
+
+<link rel="stylesheet" href="tokens/colors.css" />
+<link rel="stylesheet" href="tokens/numbers.css" />
+<link rel="stylesheet" href="tokens/typography.css" />
+<link rel="stylesheet" href="tokens/themes.css" />
+
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--ct-bkgd-01);
+    font-family: var(--ct-font-sans);
+    color: var(--ct-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: var(--ct-spacing-24) var(--ct-spacing-12) var(--ct-spacing-48);
+  }
+  .phone {
+    width: 393px;
+    max-width: 100%;
+    background: var(--ct-bkgd-02);
+    border-radius: var(--ct-spacing-24);
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(20,20,16,0.08);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* === TOP BAR === */
+  .topbar {
+    height: 110px;
+    padding: 96px var(--ct-spacing-16) var(--ct-spacing-24);
+    display: flex; justify-content: flex-end; align-items: flex-end;
+  }
+  .topbar a {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    text-decoration: none;
+  }
+
+  /* === TITLE SECTION === */
+  .title-block {
+    padding: var(--ct-spacing-24) var(--ct-spacing-20) var(--ct-spacing-20);
+    display: flex; flex-direction: column; gap: var(--ct-spacing-16);
+  }
+  .title-label {
+    margin: 0;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .title-row {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    width: 100%;
+  }
+  .title-number {
+    margin: 0;
+    font-family: var(--ct-font-sans);
+    font-weight: var(--ct-text-display-2-weight);
+    font-size: var(--ct-text-display-2-size);
+    line-height: var(--ct-text-display-2-line-height);
+    letter-spacing: -0.96px;
+    color: var(--ct-text-primary);
+  }
+  .tag-stat {
+    display: inline-flex; align-items: center; gap: var(--ct-spacing-4);
+    height: 32px;
+    background: var(--ct-status-success-subtle);
+    color: var(--ct-status-success-solid);
+    padding: var(--ct-spacing-4) var(--ct-spacing-12) var(--ct-spacing-4) var(--ct-spacing-8);
+    border-radius: var(--ct-spacing-20);
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-link-size);
+    line-height: 1.3;
+    letter-spacing: 0.06px;
+  }
+  .tag-stat-icon {
+    width: 16.8px; height: 16.8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tag-stat-icon svg { width: 9px; height: 6px; }
+
+  /* === CHART === */
+  .chart-area {
+    position: relative; width: 100%;
+    padding: 0 var(--ct-spacing-20);
+  }
+  .bar-chart {
+    width: 354px; height: 224px;
+    max-width: 100%;
+  }
+  .segment-row {
+    display: flex; gap: var(--ct-spacing-16); align-items: center;
+    padding: 24px var(--ct-spacing-20) 0;
+  }
+  .seg {
+    flex: 1; padding: var(--ct-spacing-12) 10px;
+    border-radius: var(--ct-spacing-16);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-link-size);
+    line-height: 1.3;
+    letter-spacing: 0.06px;
+    cursor: pointer;
+    border: 1px solid var(--ct-cta-secondary-container);
+    background: transparent;
+    color: var(--ct-text-primary);
+  }
+  .seg.active {
+    background: var(--ct-cta-primary-container);
+    color: var(--ct-cta-primary-text);
+    border-color: var(--ct-cta-primary-container);
+  }
+
+  /* === SECTION TABS === */
+  .tabs {
+    display: flex; position: relative;
+    border-bottom: 0.5px solid var(--ct-divider);
+    margin-top: 32px;
+  }
+  .tab {
+    flex: 1; height: 51px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    cursor: pointer;
+    position: relative;
+  }
+  .tab.active {
+    color: var(--ct-text-primary);
+  }
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -0.5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 119px;
+    max-width: 100%;
+    height: 4px;
+    background: var(--ct-text-primary);
+    border-radius: 2px;
+  }
+
+  /* === SECTION HEADER (Monitor My Data) === */
+  .section-header {
+    padding: var(--ct-spacing-24) var(--ct-spacing-20) var(--ct-spacing-16);
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .section-header-text {
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .section-header-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-h3-size);
+    line-height: var(--ct-text-h3-line-height);
+    letter-spacing: var(--ct-text-h3-letter-spacing);
+    color: var(--ct-text-primary);
+    margin: 0;
+  }
+  .section-header-sub {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    margin: 0;
+  }
+  .expand-btn {
+    width: 24px; height: 24px;
+    background: none; border: none; padding: 0;
+    color: var(--ct-text-primary);
+    cursor: pointer;
+  }
+  .expand-btn svg { width: 100%; height: 100%; }
+
+  /* === CATEGORY ROW (Data Removal / Dark web monitoring) === */
+  .category-row {
+    display: flex; align-items: center;
+    padding: var(--ct-spacing-20) var(--ct-spacing-20);
+    gap: var(--ct-spacing-16);
+    border-top: 0.5px solid var(--ct-divider);
+  }
+  .category-row:first-of-type { border-top: 0.5px solid var(--ct-divider); }
+  .category-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+  }
+  .category-icon.monitoring {
+    background: var(--ct-monitoring); /* #5936C1 */
+  }
+  .category-icon.guard {
+    background: var(--ct-guard); /* #D78E20 */
+  }
+  .category-icon.identity {
+    background: var(--ct-identity); /* #379AAD */
+  }
+  .category-icon svg { width: 20px; height: 20px; }
+  .category-name {
+    flex: 1;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .pill-active {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 24px;
+    padding: 0 var(--ct-spacing-12);
+    background: var(--ct-status-success-subtle);
+    border-radius: 999px;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-link-size);
+    line-height: 1.3;
+    letter-spacing: 0.06px;
+    color: var(--ct-text-primary);
+  }
+  .pill-active::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ct-status-success-solid);
+    flex-shrink: 0;
+  }
+
+  /* === DATA ITEMS LIST === */
+  .data-list {
+    background: var(--ct-bkgd-01);
+    padding: var(--ct-spacing-20) 0 var(--ct-spacing-24);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .data-list-inner {
+    width: 361px;
+    max-width: calc(100% - var(--ct-spacing-32));
+    display: flex; flex-direction: column; gap: var(--ct-spacing-8);
+  }
+  .data-card {
+    position: relative;
+    background: var(--ct-bkgd-02);
+    border-radius: 8px;
+    height: 98px;
+    overflow: hidden;
+  }
+  .data-card-content {
+    position: absolute; left: var(--ct-spacing-16); top: 26px;
+    display: flex; flex-direction: column; gap: var(--ct-spacing-4);
+    width: 254px;
+  }
+  .data-card-label {
+    margin: 0;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.1;
+    color: var(--text-02, #2a271c);
+  }
+  .data-card-value {
+    margin: 0;
+    font-family: var(--ct-font-sans);
+    font-size: 20px;
+    line-height: 1;
+    color: var(--ct-text-primary);
+  }
+  .data-card-badge {
+    position: absolute; right: var(--ct-spacing-16); top: 26px;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-link-size);
+    line-height: 1.3;
+    color: var(--ct-brand);
+  }
+
+  /* === MOBILE === */
+  @media (max-width: 480px) {
+    body {
+      padding: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: var(--ct-bkgd-02);
+    }
+    .phone {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .topbar {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+      padding-left: calc(env(safe-area-inset-left, 0px) + var(--ct-spacing-16));
+      padding-right: calc(env(safe-area-inset-right, 0px) + var(--ct-spacing-16));
+      height: auto;
+      min-height: 0;
+    }
+    .data-list {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + var(--ct-spacing-24));
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- TOP BAR (Close back to home) -->
+  <div class="topbar"><a href="index.html">Close</a></div>
+
+  <!-- TITLE -->
+  <div class="title-block">
+    <p class="title-label">Actions taken to protect you</p>
+    <div class="title-row">
+      <p class="title-number">4,216</p>
+      <span class="tag-stat">
+        <span class="tag-stat-icon">
+          <svg viewBox="0 0 9 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4.5 0L9 6H0z" fill="currentColor"/>
+          </svg>
+        </span>
+        18 Today
+      </span>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-area">
+    <svg class="bar-chart" viewBox="0 0 354 224" xmlns="http://www.w3.org/2000/svg" aria-label="Actions per month bar chart">
+      <!-- 12 bars: J F M A M J J A S O N D -->
+      <!-- col centers at x = i * 32.18 (px), bar width 4 -->
+      <g id="bars"></g>
+      <g id="labels"></g>
+    </svg>
+  </div>
+
+  <!-- SEGMENT CONTROL (Year selected) -->
+  <div class="segment-row">
+    <div class="seg" data-view="week">Week</div>
+    <div class="seg" data-view="month">Month</div>
+    <div class="seg active" data-view="year">Year</div>
+  </div>
+
+  <!-- SECTION TABS -->
+  <div class="tabs">
+    <div class="tab active" data-tab="monitoring">Monitoring</div>
+    <div class="tab" data-tab="guard">Guard</div>
+    <div class="tab" data-tab="identity">Identity</div>
+  </div>
+
+  <!-- SECTION HEADER -->
+  <div class="section-header">
+    <div class="section-header-text">
+      <h2 class="section-header-title">Monitor My Data</h2>
+      <p class="section-header-sub">Your exposure dropped 22% this week.</p>
+    </div>
+    <button class="expand-btn" aria-label="Expand">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- CATEGORIES (Data Removal + Dark web monitoring) -->
+  <div class="category-row">
+    <div class="category-icon monitoring">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" fill="#fff" opacity="0.95"/>
+        <path d="M9.5 12.5l2 2 3.5-4" stroke="#5936C1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="category-name">Data Removal</span>
+    <span class="pill-active">Active</span>
+  </div>
+
+  <div class="category-row">
+    <div class="category-icon guard">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" fill="#fff" opacity="0.95"/>
+        <path d="M12 8v4M12 15.5v.5" stroke="#D78E20" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="category-name">Dark web monitoring</span>
+    <span class="pill-active">Active</span>
+  </div>
+
+  <!-- DATA ITEMS LIST -->
+  <div class="data-list">
+    <div class="data-list-inner">
+      <div class="data-card">
+        <div class="data-card-content">
+          <p class="data-card-label">SSN</p>
+          <p class="data-card-value">312-423-5234</p>
+        </div>
+        <span class="data-card-badge">Dark web</span>
+      </div>
+
+      <div class="data-card">
+        <div class="data-card-content">
+          <p class="data-card-label">Phone number</p>
+          <p class="data-card-value">312-423-5234</p>
+        </div>
+        <span class="data-card-badge">8 sites</span>
+      </div>
+
+      <div class="data-card">
+        <div class="data-card-content">
+          <p class="data-card-label">Email</p>
+          <p class="data-card-value">arjun@cloaked.com</p>
+        </div>
+        <span class="data-card-badge">8 breaches</span>
+      </div>
+
+      <div class="data-card">
+        <div class="data-card-content">
+          <p class="data-card-label">Address</p>
+          <p class="data-card-value">1847 W. Addison, Chicago</p>
+        </div>
+        <span class="data-card-badge">10 Sites</span>
+      </div>
+
+      <div class="data-card">
+        <div class="data-card-content">
+          <p class="data-card-label">Birthday</p>
+          <p class="data-card-value">Mar 12, 1989</p>
+        </div>
+        <span class="data-card-badge">10 Sites</span>
+      </div>
+
+      <div class="data-card">
+        <div class="data-card-content">
+          <p class="data-card-label">Family &amp; Friends</p>
+          <p class="data-card-value">Abhijay Bhatnagar</p>
+        </div>
+        <span class="data-card-badge">10 Sites</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // 12 months Jan-Dec, value heights (px) relative to 200 max
+  var months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+  var values = [30, 120, 175, 130, 160, 70, 60, 140, 125, 140, 110, 95];
+
+  var BAR_W = 4;
+  var COL_SPACING = 354 / 11; // 32.18
+  var MAX_H = 200;
+  var TRACK_COLOR = 'rgba(20,20,16,0.08)';
+  var BAR_COLOR = '#141410';
+
+  var bars = document.getElementById('bars');
+  var labels = document.getElementById('labels');
+
+  for (var i = 0; i < 12; i++){
+    var x = i * COL_SPACING;
+    var h = values[i];
+
+    // Track (light bar going up to MAX_H)
+    var track = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    track.setAttribute('x', x);
+    track.setAttribute('y', 0);
+    track.setAttribute('width', BAR_W);
+    track.setAttribute('height', MAX_H);
+    track.setAttribute('rx', 2);
+    track.setAttribute('fill', TRACK_COLOR);
+    bars.appendChild(track);
+
+    // Filled bar (from bottom up to height h)
+    var bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bar.setAttribute('x', x);
+    bar.setAttribute('y', MAX_H - h);
+    bar.setAttribute('width', BAR_W);
+    bar.setAttribute('height', h);
+    bar.setAttribute('rx', 2);
+    bar.setAttribute('fill', BAR_COLOR);
+    bars.appendChild(bar);
+
+    // Label
+    var label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.setAttribute('x', x + BAR_W/2);
+    label.setAttribute('y', 220);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('font-family', 'SF Pro, -apple-system, sans-serif');
+    label.setAttribute('font-size', '11');
+    label.setAttribute('fill', '#84827e');
+    label.textContent = months[i];
+    labels.appendChild(label);
+  }
+
+  // Simple tab switching
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(tt){ tt.classList.remove('active'); });
+      t.classList.add('active');
+    });
+  });
+  // Simple segment switching
+  document.querySelectorAll('.seg').forEach(function(s){
+    s.addEventListener('click', function(){
+      document.querySelectorAll('.seg').forEach(function(ss){ ss.classList.remove('active'); });
+      s.classList.add('active');
+    });
+  });
+})();
+</script>
+
+</body>
+</html>
