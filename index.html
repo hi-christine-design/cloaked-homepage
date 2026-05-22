@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#ffffff" />
+<title>Cloaked — Digital Risk</title>
+<style>
+  :root {
+    --txt-primary: #141410;
+    --bkgd-01: #f3f1ed;
+    --bkgd-02: #ffffff;
+    --cloaked-orange: #ff550c;
+    --banner-bg: #dcd8cf;
+    --banner-text: #84827e;
+    --segment-border: rgba(11,11,10,0.15);
+    --segment-active: #0b0b0a;
+    --text-02: #2a271c;
+    --text-01: #1a1810;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bkgd-01);
+    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-weight: 400;
+    color: var(--txt-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 12px 48px;
+  }
+  .cloaked-mock {
+    background: var(--bkgd-02);
+    width: 393px;
+    max-width: 100%;
+    user-select: none;
+    -webkit-user-select: none;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(20,20,16,0.08);
+  }
+  .topbar {
+    height: 110px; padding: 96px 16px 24px;
+    display: flex; justify-content: flex-end; align-items: flex-end;
+    font-size: 16px; line-height: 1.3; color: var(--txt-primary);
+  }
+  .title-block {
+    padding: 24px 20px 20px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .risk-label {
+    margin: 0; font-size: 20px; line-height: 1.2; letter-spacing: 0.1px;
+    color: var(--txt-primary); text-transform: capitalize;
+  }
+  .risk-level {
+    margin: 0; font-size: 48px; line-height: 1; letter-spacing: -0.96px;
+    transition: color 0.18s ease;
+  }
+  .risk-meta {
+    margin: 0; font-size: 14px; line-height: 1.2; color: var(--banner-text);
+  }
+  .risk-meta b { font-weight: 500; color: var(--txt-primary); }
+  .chart-area {
+    position: relative; width: 100%; height: 334px; overflow: hidden;
+    cursor: ew-resize; touch-action: pan-y;
+  }
+  .inner-stack {
+    position: absolute; left: 0; top: 0; width: 394px;
+    padding: 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 24px;
+  }
+  .axis-row {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    height: 238px; width: 354px;
+  }
+  .axis-col {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    gap: 16px; height: 238px;
+  }
+  .axis-line { width: 1px; height: 214px; background: rgba(20,20,16,0.15); }
+  .axis-label {
+    font-size: 12px; line-height: 1.3; letter-spacing: 0.06px;
+    color: var(--txt-primary); opacity: 0.6; text-align: center;
+  }
+  .segment-row { display: flex; gap: 16px; align-items: center; width: 354px; }
+  .seg {
+    flex: 1; padding: 12px 10px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; line-height: 1.3; letter-spacing: 0.06px;
+    cursor: pointer;
+    border: 1px solid var(--segment-border);
+    background: transparent; color: var(--txt-primary);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .seg.active {
+    background: var(--segment-active); color: #ffffff; border-color: var(--segment-active);
+  }
+  .scrub-line {
+    position: absolute; top: 20px; height: 214px; width: 1px;
+    background: rgba(20,20,16,0.45); pointer-events: none;
+    transition: left 0.04s linear;
+  }
+  .date-label {
+    position: absolute; top: 4px; transform: translateX(-50%);
+    font-size: 13px; line-height: 1.2; color: var(--txt-primary);
+    background: rgba(243,241,237,0.92);
+    padding: 3px 8px; border-radius: 8px;
+    pointer-events: none; white-space: nowrap;
+  }
+  .chart-svg {
+    position: absolute; left: -16px; top: 42px; width: 389px; height: 181px;
+    pointer-events: none; overflow: visible;
+  }
+  .banner {
+    margin: 24px 16px 0; background: var(--banner-bg);
+    display: flex; gap: 16px; padding: 16px; border-radius: 20px;
+  }
+  .banner-title {
+    margin: 0 0 8px; font-size: 14px; line-height: 1.2; letter-spacing: 0.07px;
+    color: var(--txt-primary);
+  }
+  .banner-body {
+    margin: 0; font-size: 16px; line-height: 1.3; color: var(--banner-text);
+  }
+  .detail-section {
+    background: var(--bkgd-01);
+    padding: 20px 0; margin-top: 24px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .detail-list {
+    display: flex; flex-direction: column; gap: 8px; width: 353px;
+  }
+  .detail-card {
+    position: relative; height: 98px; background: #ffffff; border-radius: 8px; overflow: hidden;
+  }
+  .detail-inner {
+    position: absolute; left: 16px; top: 26px;
+    display: flex; flex-direction: column; gap: 4px; width: 254px;
+  }
+  .detail-label {
+    margin: 0; font-size: 16px; line-height: 1.1; color: var(--text-02);
+  }
+  .detail-value {
+    margin: 0; font-size: 20px; line-height: 1; color: var(--text-01);
+  }
+  .detail-sites {
+    position: absolute; right: 16px; top: 26px;
+    font-size: 12px; line-height: 1.1; color: var(--cloaked-orange);
+  }
+  .hint {
+    font-size: 12px; text-align: center; color: var(--banner-text);
+    margin: 16px 0 0; max-width: 393px;
+  }
+</style>
+</head>
+<body>
+
+<div class="cloaked-mock" id="cloakedMock">
+  <div class="topbar">Close</div>
+
+  <div class="title-block">
+    <p class="risk-label">Digital Risk</p>
+    <p class="risk-level" id="riskLevel" style="color:#b83100;">High</p>
+    <p class="risk-meta"><b id="siteCount">92</b> sites exposed &nbsp;·&nbsp; <span id="trendText">&#9650; 37 since Jan</span></p>
+  </div>
+
+  <div class="chart-area" id="chartArea">
+    <div class="inner-stack">
+      <div class="axis-row" id="axisRow"></div>
+      <div class="segment-row">
+        <div class="seg" data-view="week">Week</div>
+        <div class="seg" data-view="month">Month</div>
+        <div class="seg active" data-view="year">Year</div>
+      </div>
+    </div>
+
+    <div class="date-label" id="dateLabel" style="left: 374px;">Dec 15, 2026</div>
+    <div class="scrub-line" id="scrubLine" style="left: 374px;"></div>
+
+    <svg class="chart-svg" id="chartSvg" viewBox="0 0 389 181" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff550c"/>
+          <stop offset="50%" stop-color="#e8b800"/>
+          <stop offset="100%" stop-color="#6cb84a"/>
+        </linearGradient>
+        <radialGradient id="haloGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#ff550c" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="#ff550c" stop-opacity="0"/>
+        </radialGradient>
+        <clipPath id="scrubClip">
+          <rect id="clipRect" x="0" y="-20" width="390" height="220"/>
+        </clipPath>
+      </defs>
+      <polyline id="lineFaded" points="" fill="none" stroke="url(#riskGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity="0.25"/>
+      <polyline id="lineBold" points="" fill="none" stroke="url(#riskGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#scrubClip)"/>
+      <circle id="haloCircle" cx="390" cy="11" r="22" fill="url(#haloGrad)"/>
+      <circle id="scrubDot" cx="390" cy="11" r="6" fill="#b83100"/>
+    </svg>
+  </div>
+
+  <div class="banner">
+    <div>
+      <p class="banner-title">From team</p>
+      <p class="banner-body">Your data exposure has been increasing again recently. This may happen when using public Wi-Fi. Consider turning on a VPN when on public networks.</p>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-list">
+      <div class="detail-card">
+        <div class="detail-inner">
+          <p class="detail-label">Your Name</p>
+          <p class="detail-value">Christine Yun</p>
+        </div>
+        <span class="detail-sites">2 sites</span>
+      </div>
+      <div class="detail-card">
+        <div class="detail-inner">
+          <p class="detail-label">SSN</p>
+          <p class="detail-value">***-**- 4382</p>
+        </div>
+        <span class="detail-sites">8 sites</span>
+      </div>
+      <div class="detail-card">
+        <div class="detail-inner">
+          <p class="detail-label">Phone Number</p>
+          <p class="detail-value">123-456-7890</p>
+        </div>
+        <span class="detail-sites">8 Sites</span>
+      </div>
+      <div class="detail-card">
+        <div class="detail-inner">
+          <p class="detail-label">Email</p>
+          <p class="detail-value">Tester's Email</p>
+        </div>
+        <span class="detail-sites">8 Sites</span>
+      </div>
+      <div class="detail-card">
+        <div class="detail-inner">
+          <p class="detail-label">Address</p>
+          <p class="detail-value">Tester's Address</p>
+        </div>
+        <span class="detail-sites">10 Sites</span>
+      </div>
+      <div class="detail-card">
+        <div class="detail-inner">
+          <p class="detail-label">Birthday</p>
+          <p class="detail-value">09/22/1980</p>
+        </div>
+        <span class="detail-sites">10 Sites</span>
+      </div>
+      <div class="detail-card">
+        <div class="detail-inner">
+          <p class="detail-label">Family &amp; Friends</p>
+          <p class="detail-value">Tester's family name</p>
+        </div>
+        <span class="detail-sites">10 Sites</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="hint">Drag across the chart to scrub through time. Tap Week / Month / Year to swap the dataset.</p>
+
+<script>
+(function(){
+  var datasets = {
+    year: {
+      labels: ['J','F','M','A','M','J','J','A','S','O','N','D'],
+      values: [55, 38, 18, 35, 42, 40, 48, 45, 48, 45, 50, 92],
+      trend: function(v){
+        var d = Math.round(v - 55);
+        return (d >= 0 ? '▲ ' : '▼ ') + Math.abs(d) + ' since Jan';
+      },
+      dateAt: function(scrubX){
+        var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
+        var day = Math.round(t * 364) + 1;
+        var d = new Date(2026, 0, day);
+        var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return m[d.getMonth()] + ' ' + d.getDate() + ', 2026';
+      }
+    },
+    month: {
+      labels: ['1','8','15','22','29'],
+      values: [48, 50, 47, 52, 48, 55, 50, 58, 55, 62, 65, 68, 72, 78, 92],
+      trend: function(v){
+        var d = Math.round(v - 48);
+        return (d >= 0 ? '▲ ' : '▼ ') + Math.abs(d) + ' since May 1';
+      },
+      dateAt: function(scrubX){
+        var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
+        var day = Math.round(t * 28) + 1;
+        return 'May ' + day + ', 2026';
+      }
+    },
+    week: {
+      labels: ['M','T','W','T','F','S','S'],
+      values: [55, 60, 50, 58, 75, 85, 92],
+      trend: function(v){
+        var d = Math.round(v - 55);
+        return (d >= 0 ? '▲ ' : '▼ ') + Math.abs(d) + ' since Mon';
+      },
+      dateAt: function(scrubX){
+        var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
+        var i = Math.round(t * 6);
+        return ['Mon, May 18','Tue, May 19','Wed, May 20','Thu, May 21','Fri, May 22','Sat, May 23','Sun, May 24'][i];
+      }
+    }
+  };
+
+  var currentView = 'year';
+  var scrubX = 390;
+
+  function levelFromValue(v){
+    if (v >= 70) return { word: 'High',   color: '#b83100' };
+    if (v >= 40) return { word: 'Medium', color: '#ba7517' };
+    return                 { word: 'Low',    color: '#639922' };
+  }
+
+  function valueToY(v){ return 170 - v * 1.55; }
+
+  function getPoints(view){
+    var ds = datasets[view];
+    var n = ds.values.length;
+    var pts = [];
+    for (var i = 0; i < n; i++){
+      var x = 36 + (i / (n - 1)) * 354;
+      pts.push([x, valueToY(ds.values[i])]);
+    }
+    return pts;
+  }
+
+  function interpY(pts, x){
+    if (x <= pts[0][0]) return pts[0][1];
+    if (x >= pts[pts.length-1][0]) return pts[pts.length-1][1];
+    for (var i = 0; i < pts.length-1; i++){
+      if (x >= pts[i][0] && x <= pts[i+1][0]){
+        var t = (x - pts[i][0]) / (pts[i+1][0] - pts[i][0]);
+        return pts[i][1] + (pts[i+1][1] - pts[i][1]) * t;
+      }
+    }
+    return pts[pts.length-1][1];
+  }
+
+  function valueAt(view, x){
+    var ds = datasets[view];
+    var n = ds.values.length;
+    var t = Math.max(0, Math.min(1, (x - 36) / 354));
+    var pos = t * (n - 1);
+    var i = Math.floor(pos);
+    if (i >= n - 1) return ds.values[n-1];
+    var f = pos - i;
+    return ds.values[i] + (ds.values[i+1] - ds.values[i]) * f;
+  }
+
+  function renderAxis(){
+    var ds = datasets[currentView];
+    var html = '';
+    for (var i = 0; i < ds.labels.length; i++){
+      html += '<div class="axis-col"><div class="axis-line"></div><span class="axis-label">' + ds.labels[i] + '</span></div>';
+    }
+    document.getElementById('axisRow').innerHTML = html;
+  }
+
+  function renderLines(){
+    var pts = getPoints(currentView);
+    var s = pts.map(function(p){ return p[0].toFixed(2) + ',' + p[1].toFixed(2); }).join(' ');
+    document.getElementById('lineFaded').setAttribute('points', s);
+    document.getElementById('lineBold').setAttribute('points', s);
+  }
+
+  function updateScrubber(){
+    var ds = datasets[currentView];
+    var v = valueAt(currentView, scrubX);
+    var pts = getPoints(currentView);
+    var y = interpY(pts, scrubX);
+    var lvl = levelFromValue(v);
+
+    document.getElementById('riskLevel').textContent = lvl.word;
+    document.getElementById('riskLevel').style.color = lvl.color;
+    document.getElementById('siteCount').textContent = Math.round(v);
+    document.getElementById('trendText').textContent = ds.trend(v);
+
+    document.getElementById('haloCircle').setAttribute('cx', scrubX);
+    document.getElementById('haloCircle').setAttribute('cy', y);
+    document.getElementById('scrubDot').setAttribute('cx', scrubX);
+    document.getElementById('scrubDot').setAttribute('cy', y);
+    document.getElementById('scrubDot').setAttribute('fill', lvl.color);
+    document.getElementById('clipRect').setAttribute('width', scrubX);
+
+    var containerX = scrubX - 16;
+    document.getElementById('scrubLine').style.left = containerX + 'px';
+    var dateLabel = document.getElementById('dateLabel');
+    dateLabel.style.left = Math.max(40, Math.min(353, containerX)) + 'px';
+    dateLabel.textContent = ds.dateAt(scrubX);
+  }
+
+  function setView(v){
+    currentView = v;
+    var segs = document.querySelectorAll('#cloakedMock .seg');
+    for (var i = 0; i < segs.length; i++){
+      if (segs[i].getAttribute('data-view') === v) segs[i].classList.add('active');
+      else segs[i].classList.remove('active');
+    }
+    renderAxis();
+    renderLines();
+    scrubX = 390;
+    updateScrubber();
+  }
+
+  renderAxis();
+  renderLines();
+  updateScrubber();
+
+  var segs = document.querySelectorAll('#cloakedMock .seg');
+  for (var i = 0; i < segs.length; i++){
+    (function(el){
+      el.addEventListener('click', function(e){
+        e.stopPropagation();
+        setView(el.getAttribute('data-view'));
+      });
+    })(segs[i]);
+  }
+
+  var chartArea = document.getElementById('chartArea');
+  var chartSvg = document.getElementById('chartSvg');
+  var isDown = false;
+
+  function pointerToSvgX(clientX){
+    var rect = chartSvg.getBoundingClientRect();
+    var relX = clientX - rect.left;
+    var sx = (relX / rect.width) * 389;
+    return Math.max(36, Math.min(390, sx));
+  }
+
+  function onPointer(e){
+    if (e.target.closest && e.target.closest('.seg')) return;
+    var cx = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+    if (typeof cx !== 'number') return;
+    scrubX = pointerToSvgX(cx);
+    updateScrubber();
+  }
+
+  chartArea.addEventListener('pointerdown', function(e){
+    if (e.target.closest && e.target.closest('.seg')) return;
+    isDown = true;
+    try { chartArea.setPointerCapture(e.pointerId); } catch(_){}
+    onPointer(e);
+  });
+  chartArea.addEventListener('pointermove', function(e){ if (isDown) onPointer(e); });
+  chartArea.addEventListener('pointerup', function(){ isDown = false; });
+  chartArea.addEventListener('pointercancel', function(){ isDown = false; });
+  chartArea.addEventListener('pointerleave', function(){ isDown = false; });
+})();
+</script>
+</body>
+</html>
