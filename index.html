@@ -2,8 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <meta name="theme-color" content="#ffffff" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <title>Cloaked — Digital Risk</title>
 <style>
   :root {
@@ -102,6 +104,13 @@
     background: rgba(20,20,16,0.45); pointer-events: none;
     transition: left 0.04s linear;
   }
+  .axis-row, .chart-svg {
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+  }
+  .chart-anim {
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease-out;
+  }
   .date-label {
     position: absolute; top: 4px; transform: translateX(-50%);
     font-size: 13px; line-height: 1.2; color: var(--txt-primary);
@@ -152,6 +161,38 @@
   .hint {
     font-size: 12px; text-align: center; color: var(--banner-text);
     margin: 16px 0 0; max-width: 393px;
+  }
+
+  /* Mobile: edge-to-edge, white under iOS status bar */
+  @media (max-width: 480px) {
+    html, body {
+      background: var(--bkgd-02);
+    }
+    body {
+      padding: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+    .cloaked-mock {
+      width: 100%;
+      max-width: 100%;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .topbar {
+      /* Push 'Close' below the iOS status bar / notch */
+      padding-top: calc(env(safe-area-inset-top, 0px) + 54px);
+      padding-left: calc(env(safe-area-inset-left, 0px) + 16px);
+      padding-right: calc(env(safe-area-inset-right, 0px) + 16px);
+      height: auto;
+      min-height: 96px;
+    }
+    .detail-section {
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+    }
+    .hint {
+      padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 24px);
+    }
   }
 </style>
 </head>
@@ -265,6 +306,14 @@
 
 <p class="hint">Drag across the chart to scrub through time. Tap Week / Month / Year to swap the dataset.</p>
 
+<!-- Hidden haptic trigger: iOS 18+ Safari fires a Taptic-Engine click when an
+     <input type="checkbox" switch> toggles. We programmatically click the label
+     to flip state and emit a haptic. Invisible on every platform; no-op on iOS<18. -->
+<label id="hapticLabel" for="hapticSwitch" aria-hidden="true"
+       style="position:absolute; opacity:0; pointer-events:none; left:-9999px; width:1px; height:1px;">
+  <input type="checkbox" switch id="hapticSwitch" tabindex="-1" />
+</label>
+
 <script>
 (function(){
   var datasets = {
@@ -313,6 +362,7 @@
 
   var currentView = 'year';
   var scrubX = 390;
+  var lastTickIdx = -1; // tracks discrete data-point boundary for haptic ticks
 
   function levelFromValue(v){
     if (v >= 70) return { word: 'High',   color: '#b83100' };
@@ -396,19 +446,81 @@
     var dateLabel = document.getElementById('dateLabel');
     dateLabel.style.left = Math.max(40, Math.min(353, containerX)) + 'px';
     dateLabel.textContent = ds.dateAt(scrubX);
+
+    // Haptic tick when crossing a discrete data-point boundary
+    var n = ds.values.length;
+    var t = Math.max(0, Math.min(1, (scrubX - 36) / 354));
+    var tickIdx = Math.round(t * (n - 1));
+    if (tickIdx !== lastTickIdx){
+      lastTickIdx = tickIdx;
+      triggerHaptic(6);
+    }
   }
 
+  var viewOrder = { week: 0, month: 1, year: 2 };
+
   function setView(v){
+    if (v === currentView) return;
+
+    var isExpanding = viewOrder[v] > viewOrder[currentView];
+    // Expand: new chart starts compressed, settles to full width.
+    // Squeeze: new chart starts stretched, settles to full width.
+    var startScale = isExpanding ? 0.72 : 1.32;
+
     currentView = v;
     var segs = document.querySelectorAll('#cloakedMock .seg');
     for (var i = 0; i < segs.length; i++){
       if (segs[i].getAttribute('data-view') === v) segs[i].classList.add('active');
       else segs[i].classList.remove('active');
     }
+
+    var axisRow = document.getElementById('axisRow');
+    var chartSvg = document.getElementById('chartSvg');
+
+    // Snap to start state with no transition
+    axisRow.classList.remove('chart-anim');
+    chartSvg.classList.remove('chart-anim');
+    axisRow.style.transform = 'scaleX(' + startScale + ')';
+    chartSvg.style.transform = 'scaleX(' + startScale + ')';
+    axisRow.style.opacity = '0.35';
+    chartSvg.style.opacity = '0.4';
+
+    // Update data
     renderAxis();
     renderLines();
     scrubX = 390;
     updateScrubber();
+
+    // Force reflow, then transition to settled state
+    void axisRow.offsetWidth;
+    requestAnimationFrame(function(){
+      axisRow.classList.add('chart-anim');
+      chartSvg.classList.add('chart-anim');
+      axisRow.style.transform = 'scaleX(1)';
+      chartSvg.style.transform = 'scaleX(1)';
+      axisRow.style.opacity = '1';
+      chartSvg.style.opacity = '1';
+    });
+
+    // Small haptic tick on segment change too
+    triggerHaptic(12);
+  }
+
+  // Haptic / vibration. Two paths because no single web API covers both:
+  //   • Android Chrome/Firefox  → navigator.vibrate(ms)
+  //   • iOS Safari 18+ (incl. homescreen PWA) → toggle a hidden <input switch>;
+  //     Taptic Engine fires on the toggle. Must run inside a user gesture
+  //     (pointermove/click handlers qualify); ignored otherwise.
+  // Older iOS (<18) and desktop just no-op silently.
+  var _hapticLabel = null;
+  function triggerHaptic(ms){
+    if (navigator && typeof navigator.vibrate === 'function'){
+      try { navigator.vibrate(ms || 8); } catch(_){}
+    }
+    if (!_hapticLabel) _hapticLabel = document.getElementById('hapticLabel');
+    if (_hapticLabel){
+      try { _hapticLabel.click(); } catch(_){}
+    }
   }
 
   renderAxis();
