@@ -306,16 +306,7 @@
 
 <p class="hint">Drag across the chart to scrub through time. Tap Week / Month / Year to swap the dataset.</p>
 
-<!-- Hidden haptic trigger: iOS 18+ Safari fires a Taptic-Engine click when an
-     <input type="checkbox" switch> toggles. We programmatically click the
-     INPUT (not the label — more reliable inside pointermove handlers).
-     Note: removed pointer-events:none — iOS Safari skips haptic for elements
-     whose pointer-events are disabled. Element is still visually hidden via
-     opacity:0 and off-screen positioning. -->
-<label for="hapticSwitch" aria-hidden="true"
-       style="position:absolute; opacity:0; left:-9999px; top:0; width:1px; height:1px; overflow:hidden;">
-  <input type="checkbox" switch id="hapticSwitch" tabindex="-1" />
-</label>
+<!-- iOS Safari 17.4+ haptic: dynamically created in JS each tick. See triggerHaptic(). -->
 
 <script>
 (function(){
@@ -511,19 +502,34 @@
 
   // Haptic / vibration. Two paths because no single web API covers both:
   //   • Android Chrome/Firefox  → navigator.vibrate(ms)
-  //   • iOS Safari 18+ (incl. homescreen PWA) → toggle a hidden <input switch>;
-  //     Taptic Engine fires on the toggle. Click the INPUT directly (more
-  //     reliable inside pointermove handlers than clicking the label wrapper).
-  // Older iOS (<18) and desktop just no-op silently.
-  var _hapticInput = null;
+  //   • iOS Safari 17.4+ (incl. homescreen PWA) → mount a fresh
+  //     <input type="checkbox" switch> + <label>, click the label to toggle,
+  //     then remove on next frame. iOS fires the Taptic Engine on toggle.
+  //     A NEW element per call is required — reusing one gets throttled
+  //     during rapid scrubbing. Pattern matches the `ios-haptics` library.
   function triggerHaptic(ms){
     if (navigator && typeof navigator.vibrate === 'function'){
       try { navigator.vibrate(ms || 8); } catch(_){}
     }
-    if (!_hapticInput) _hapticInput = document.getElementById('hapticSwitch');
-    if (_hapticInput){
-      try { _hapticInput.click(); } catch(_){}
-    }
+    try {
+      var id = '_h' + Date.now() + Math.floor(Math.random() * 1e6);
+      var label = document.createElement('label');
+      label.setAttribute('for', id);
+      label.setAttribute('aria-hidden', 'true');
+      label.style.cssText = 'position:absolute;opacity:0;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none;';
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = id;
+      input.setAttribute('switch', '');
+      input.tabIndex = -1;
+      label.appendChild(input);
+      document.body.appendChild(label);
+      label.click();
+      // Defer cleanup so the click + haptic actually register before removal.
+      requestAnimationFrame(function(){
+        try { label.remove(); } catch(_){}
+      });
+    } catch(_){}
   }
 
   renderAxis();
