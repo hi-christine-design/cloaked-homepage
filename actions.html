@@ -100,11 +100,41 @@
   .chart-area {
     position: relative; width: 100%;
     padding: 0 var(--ct-spacing-20);
+    cursor: ew-resize;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .bar-chart {
     width: 354px; height: 224px;
     max-width: 100%;
+    transform-origin: 50% 100%;
+    will-change: transform, opacity;
   }
+  .bar-chart.anim {
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 200ms ease-out;
+  }
+  .bar-chart .bar-fill { transition: fill 0.12s ease; }
+  .bar-chart .bar-fill.active { fill: var(--ct-brand); }
+  .scrub-label {
+    position: absolute; top: -8px;
+    transform: translateX(-50%);
+    background: var(--ct-bkgd-01);
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-family: var(--ct-font-sans);
+    font-size: 13px;
+    line-height: 1.2;
+    color: var(--ct-text-primary);
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    box-shadow: 0 1px 2px rgba(20,20,16,0.08);
+  }
+  .scrub-label.visible { opacity: 1; }
   .segment-row {
     display: flex; gap: var(--ct-spacing-16); align-items: center;
     padding: 24px var(--ct-spacing-20) 0;
@@ -325,23 +355,22 @@
   <div class="title-block">
     <p class="title-label">Actions taken to protect you</p>
     <div class="title-row">
-      <p class="title-number">4,216</p>
-      <span class="tag-stat">
-        <span class="tag-stat-icon">
+      <p class="title-number" id="titleNumber">4,216</p>
+      <span class="tag-stat" id="titleTag">
+        <span class="tag-stat-icon" id="titleTagIcon">
           <svg viewBox="0 0 9 6" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M4.5 0L9 6H0z" fill="currentColor"/>
           </svg>
         </span>
-        18 Today
+        <span id="titleTagText">18 Today</span>
       </span>
     </div>
   </div>
 
   <!-- CHART -->
-  <div class="chart-area">
-    <svg class="bar-chart" viewBox="0 0 354 224" xmlns="http://www.w3.org/2000/svg" aria-label="Actions per month bar chart">
-      <!-- 12 bars: J F M A M J J A S O N D -->
-      <!-- col centers at x = i * 32.18 (px), bar width 4 -->
+  <div class="chart-area" id="chartArea">
+    <div class="scrub-label" id="scrubLabel"></div>
+    <svg class="bar-chart" id="barChart" viewBox="0 0 354 224" xmlns="http://www.w3.org/2000/svg" aria-label="Actions bar chart">
       <g id="bars"></g>
       <g id="labels"></g>
     </svg>
@@ -454,69 +483,278 @@
 
 <script>
 (function(){
-  // 12 months Jan-Dec, value heights (px) relative to 200 max
-  var months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
-  var values = [30, 120, 175, 130, 160, 70, 60, 140, 125, 140, 110, 95];
-
-  var BAR_W = 4;
-  var COL_SPACING = 354 / 11; // 32.18
-  var MAX_H = 200;
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var CHART_W = 354;
+  var MAX_H   = 200;
+  var BAR_R   = 2;
   var TRACK_COLOR = 'rgba(20,20,16,0.08)';
-  var BAR_COLOR = '#141410';
+  var BAR_COLOR   = '#141410';
 
-  var bars = document.getElementById('bars');
+  // Datasets per view -------------------------------------------------------
+  // values are raw action counts; renderer scales to MAX_H based on the
+  // dataset's own max so the tallest bar fills the chart.
+  var datasets = {
+    week: {
+      labels: ['M','T','W','T','F','S','S'],
+      values: [15, 18, 12, 22, 14, 25, 19],
+      dates: ['Mon, May 18','Tue, May 19','Wed, May 20','Thu, May 21','Fri, May 22','Sat, May 23','Sun, May 24'],
+      barWidth: 14,
+      labelEvery: 1
+    },
+    month: {
+      labels: null, // computed sparsely
+      values: [8,12,15,7,11,14,9,18,13,10,16,8,12,11,15,18,13,9,7,14,17,11,12,8,15,13,10,14,16,12],
+      dates: null, // computed: "May 1" ... "May 30"
+      barWidth: 6,
+      labelEvery: 7 // show label every 7 bars: idx 0,7,14,21,28 ≈ days 1,8,15,22,29
+    },
+    year: {
+      labels: ['J','F','M','A','M','J','J','A','S','O','N','D'],
+      values: [30, 120, 175, 130, 160, 70, 60, 140, 125, 140, 110, 95],
+      dates: ['Jan 2026','Feb 2026','Mar 2026','Apr 2026','May 2026','Jun 2026','Jul 2026','Aug 2026','Sep 2026','Oct 2026','Nov 2026','Dec 2026'],
+      barWidth: 4,
+      labelEvery: 1
+    }
+  };
+
+  // Fill in computed labels/dates for month
+  (function(){
+    var m = datasets.month;
+    m.dates = [];
+    m.labels = [];
+    for (var i = 0; i < m.values.length; i++){
+      m.dates.push('May ' + (i + 1) + ', 2026');
+      m.labels.push((i % m.labelEvery === 0) ? String(i + 1) : '');
+    }
+  })();
+
+  var viewOrder = { week: 0, month: 1, year: 2 };
+  var currentView = 'year';
+  var scrubIdx = -1; // -1 = no scrub, show defaults
+  var lastTickIdx = -1; // for haptic throttling
+
+  // DOM refs
+  var bars   = document.getElementById('bars');
   var labels = document.getElementById('labels');
+  var chartArea  = document.getElementById('chartArea');
+  var barChart   = document.getElementById('barChart');
+  var scrubLabel = document.getElementById('scrubLabel');
+  var titleNumber  = document.getElementById('titleNumber');
+  var titleTag     = document.getElementById('titleTag');
+  var titleTagText = document.getElementById('titleTagText');
+  var titleTagIcon = document.getElementById('titleTagIcon');
 
-  for (var i = 0; i < 12; i++){
-    var x = i * COL_SPACING;
-    var h = values[i];
+  // Render ------------------------------------------------------------------
+  function renderBars(){
+    var ds = datasets[currentView];
+    var n = ds.values.length;
+    var maxVal = Math.max.apply(null, ds.values);
+    var barW = ds.barWidth;
+    var colW = (CHART_W - barW) / (n - 1);
 
-    // Track (light bar going up to MAX_H)
-    var track = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    track.setAttribute('x', x);
-    track.setAttribute('y', 0);
-    track.setAttribute('width', BAR_W);
-    track.setAttribute('height', MAX_H);
-    track.setAttribute('rx', 2);
-    track.setAttribute('fill', TRACK_COLOR);
-    bars.appendChild(track);
+    bars.innerHTML = '';
+    labels.innerHTML = '';
 
-    // Filled bar (from bottom up to height h)
-    var bar = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    bar.setAttribute('x', x);
-    bar.setAttribute('y', MAX_H - h);
-    bar.setAttribute('width', BAR_W);
-    bar.setAttribute('height', h);
-    bar.setAttribute('rx', 2);
-    bar.setAttribute('fill', BAR_COLOR);
-    bars.appendChild(bar);
+    for (var i = 0; i < n; i++){
+      var x = i * colW;
+      var v = ds.values[i];
+      var h = Math.max(2, (v / maxVal) * MAX_H);
 
-    // Label
-    var label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-    label.setAttribute('x', x + BAR_W/2);
-    label.setAttribute('y', 220);
-    label.setAttribute('text-anchor', 'middle');
-    label.setAttribute('font-family', 'SF Pro, -apple-system, sans-serif');
-    label.setAttribute('font-size', '11');
-    label.setAttribute('fill', '#84827e');
-    label.textContent = months[i];
-    labels.appendChild(label);
+      // Track
+      var track = document.createElementNS(SVGNS, 'rect');
+      track.setAttribute('x', x);
+      track.setAttribute('y', 0);
+      track.setAttribute('width', barW);
+      track.setAttribute('height', MAX_H);
+      track.setAttribute('rx', BAR_R);
+      track.setAttribute('fill', TRACK_COLOR);
+      track.setAttribute('class', 'bar-track');
+      bars.appendChild(track);
+
+      // Fill bar
+      var bar = document.createElementNS(SVGNS, 'rect');
+      bar.setAttribute('x', x);
+      bar.setAttribute('y', MAX_H - h);
+      bar.setAttribute('width', barW);
+      bar.setAttribute('height', h);
+      bar.setAttribute('rx', BAR_R);
+      bar.setAttribute('fill', BAR_COLOR);
+      bar.setAttribute('class', 'bar-fill');
+      bar.setAttribute('data-idx', i);
+      bars.appendChild(bar);
+
+      // Label (only every labelEvery)
+      if (ds.labels[i]){
+        var label = document.createElementNS(SVGNS, 'text');
+        label.setAttribute('x', x + barW/2);
+        label.setAttribute('y', 220);
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('font-family', 'SF Pro, -apple-system, sans-serif');
+        label.setAttribute('font-size', '11');
+        label.setAttribute('fill', '#84827e');
+        label.textContent = ds.labels[i];
+        labels.appendChild(label);
+      }
+    }
   }
 
-  // Simple tab switching
+  // Number formatting (1234 -> "1,234")
+  function fmt(n){ return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+  // Update header + highlighted bar based on scrub index (-1 = idle)
+  function updateUI(){
+    var fills = bars.querySelectorAll('.bar-fill');
+    for (var i = 0; i < fills.length; i++) fills[i].classList.remove('active');
+
+    if (scrubIdx < 0){
+      // Idle: defaults
+      titleNumber.textContent = '4,216';
+      titleTag.style.background = 'var(--ct-status-success-subtle)';
+      titleTag.style.color = 'var(--ct-status-success-solid)';
+      titleTagIcon.style.display = '';
+      titleTagText.textContent = '18 Today';
+      scrubLabel.classList.remove('visible');
+      return;
+    }
+
+    var ds = datasets[currentView];
+    var v  = ds.values[scrubIdx];
+    var date = ds.dates[scrubIdx];
+
+    titleNumber.textContent = fmt(v);
+    // Swap the green-success pill for a neutral date pill while scrubbing
+    titleTag.style.background = 'var(--ct-color-grey-02)';
+    titleTag.style.color = 'var(--ct-text-primary)';
+    titleTagIcon.style.display = 'none';
+    titleTagText.textContent = date;
+
+    if (fills[scrubIdx]) fills[scrubIdx].classList.add('active');
+
+    // Position the scrub label above the highlighted bar
+    var barX = parseFloat(fills[scrubIdx].getAttribute('x'));
+    var barW = parseFloat(fills[scrubIdx].getAttribute('width'));
+    var rect = barChart.getBoundingClientRect();
+    var scaleX = rect.width / CHART_W;
+    var areaRect = chartArea.getBoundingClientRect();
+    var leftPx = (barX + barW/2) * scaleX + (rect.left - areaRect.left);
+    scrubLabel.style.left = leftPx + 'px';
+    scrubLabel.textContent = date;
+    scrubLabel.classList.add('visible');
+  }
+
+  // View switching with expand/squeeze animation ----------------------------
+  function setView(v){
+    if (v === currentView) return;
+    var isExpanding = viewOrder[v] > viewOrder[currentView];
+    var startScale = isExpanding ? 0.72 : 1.32;
+
+    currentView = v;
+    scrubIdx = -1;
+    lastTickIdx = -1;
+
+    document.querySelectorAll('.seg').forEach(function(el){
+      el.classList.toggle('active', el.dataset.view === v);
+    });
+
+    barChart.classList.remove('anim');
+    barChart.style.transform = 'scaleX(' + startScale + ')';
+    barChart.style.opacity = '0.35';
+
+    renderBars();
+    updateUI();
+
+    void barChart.offsetWidth; // force reflow
+    requestAnimationFrame(function(){
+      barChart.classList.add('anim');
+      barChart.style.transform = 'scaleX(1)';
+      barChart.style.opacity = '1';
+    });
+
+    triggerHaptic(12);
+  }
+
+  // Scrub handlers ----------------------------------------------------------
+  function pointerToBarIdx(clientX){
+    var rect = barChart.getBoundingClientRect();
+    var x = clientX - rect.left;
+    var ratio = Math.max(0, Math.min(1, x / rect.width));
+    var ds = datasets[currentView];
+    return Math.round(ratio * (ds.values.length - 1));
+  }
+
+  var isDown = false;
+  chartArea.addEventListener('pointerdown', function(e){
+    isDown = true;
+    try { chartArea.setPointerCapture(e.pointerId); } catch(_){}
+    var idx = pointerToBarIdx(e.clientX);
+    scrubIdx = idx;
+    lastTickIdx = idx;
+    triggerHaptic(8);
+    updateUI();
+  });
+  chartArea.addEventListener('pointermove', function(e){
+    if (!isDown) return;
+    var idx = pointerToBarIdx(e.clientX);
+    if (idx !== scrubIdx){
+      scrubIdx = idx;
+      if (idx !== lastTickIdx){
+        lastTickIdx = idx;
+        triggerHaptic(6);
+      }
+      updateUI();
+    }
+  });
+  function endScrub(){ isDown = false; }
+  chartArea.addEventListener('pointerup', endScrub);
+  chartArea.addEventListener('pointercancel', endScrub);
+  chartArea.addEventListener('pointerleave', endScrub);
+
+  // Segment + tab handlers --------------------------------------------------
+  document.querySelectorAll('.seg').forEach(function(s){
+    s.addEventListener('click', function(e){
+      e.stopPropagation();
+      setView(s.dataset.view);
+    });
+  });
   document.querySelectorAll('.tab').forEach(function(t){
     t.addEventListener('click', function(){
       document.querySelectorAll('.tab').forEach(function(tt){ tt.classList.remove('active'); });
       t.classList.add('active');
+      triggerHaptic(10);
     });
   });
-  // Simple segment switching
-  document.querySelectorAll('.seg').forEach(function(s){
-    s.addEventListener('click', function(){
-      document.querySelectorAll('.seg').forEach(function(ss){ ss.classList.remove('active'); });
-      s.classList.add('active');
-    });
-  });
+
+  // Haptic ------------------------------------------------------------------
+  // Same pattern as digital-risk.html: dynamic <input switch> for iOS 17.4+,
+  // navigator.vibrate for Android. iOS Safari pointermove can't fire haptic
+  // reliably (platform limit), so scrub haptic only fires on Android.
+  function triggerHaptic(ms){
+    if (navigator && typeof navigator.vibrate === 'function'){
+      try { navigator.vibrate(ms || 8); } catch(_){}
+    }
+    try {
+      var id = '_h' + Date.now() + Math.floor(Math.random() * 1e6);
+      var label = document.createElement('label');
+      label.setAttribute('for', id);
+      label.setAttribute('aria-hidden', 'true');
+      label.style.cssText = 'position:absolute;opacity:0;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;pointer-events:none;';
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.id = id;
+      input.setAttribute('switch', '');
+      input.tabIndex = -1;
+      label.appendChild(input);
+      document.body.appendChild(label);
+      label.click();
+      requestAnimationFrame(function(){
+        try { label.remove(); } catch(_){}
+      });
+    } catch(_){}
+  }
+
+  // Init --------------------------------------------------------------------
+  renderBars();
+  updateUI();
 })();
 </script>
 
