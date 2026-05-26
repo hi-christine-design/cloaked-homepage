@@ -1250,14 +1250,38 @@
 
   @media (max-width: 800px) {
     body { padding: 16px; }
-    .controls { width: 100%; }
   }
 
-  /* === VERSION TOGGLE (Home / Lab) — links to sibling prototype === */
+  /* === MOBILE: phone fills the viewport (drop the phone-frame chrome) === */
+  @media (max-width: 480px) {
+    body {
+      padding: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: var(--ct-color-grey-05);
+      display: block;
+    }
+    .phone {
+      width: 100%;
+      height: 100vh;
+      height: 100dvh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .phone::before { display: none; }  /* real device has its own notch */
+    .hero {
+      padding-top: calc(env(safe-area-inset-top, 0px) + 46px);
+      padding-left: calc(env(safe-area-inset-left, 0px) + var(--ct-spacing-20));
+      padding-right: calc(env(safe-area-inset-right, 0px) + var(--ct-spacing-20));
+    }
+  }
+
+  /* === VERSION TOGGLE (Home / Lab) — bottom-center, links to sibling prototype === */
   .version-toggle {
     position: fixed;
-    top: max(env(safe-area-inset-top, 0px), 14px);
-    right: 14px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 9999;
     background: rgba(20,20,16,0.85);
     -webkit-backdrop-filter: blur(20px);
@@ -1404,41 +1428,6 @@
       </div>
 
     </div>
-  </div>
-</div>
-
-<!-- ===================== CONTROL PANEL ===================== -->
-<div class="controls">
-  <h2>Dashboard interaction</h2>
-  <div class="sub">Click around — now with <b>S / M / L</b> per widget.</div>
-
-  <div class="control-group">
-    <div class="control-label">Picker browse layout</div>
-    <div class="seg" data-target="picker">
-      <button data-val="1up">1-up</button>
-      <button data-val="2up" class="active">2-up</button>
-    </div>
-  </div>
-
-  <div class="control-group">
-    <div class="control-label">Add flow</div>
-    <div class="step"><div class="step-num">1</div><div class="step-text">Tap <b>+ Add to dashboard</b> → modal opens to browse view.</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Tap any widget → <b>preview slides in from right</b>. Card centered on stage.</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text">Tap <span class="pill-key">S</span> <span class="pill-key">M</span> <span class="pill-key">L</span> pills to preview each size live.</div></div>
-    <div class="step"><div class="step-num">4</div><div class="step-text">Tap <b>Add widget</b> → modal closes, card lands on dashboard at chosen size.</div></div>
-  </div>
-
-  <div class="control-group">
-    <div class="control-label">Edit flow</div>
-    <div class="step"><div class="step-num">1</div><div class="step-text">Tap <b>Edit</b> → background tints, sticky banner appears, cards wiggle.</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Tap a resizable card → it gets a brand border + <b>S/M/L pill bar</b> below it.</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text">Tap a pill → size changes, grid reflows with spring. Tap card again or outside to deselect.</div></div>
-    <div class="step"><div class="step-num">4</div><div class="step-text">Long-press 220ms → drag to reorder.</div></div>
-    <div class="step"><div class="step-num">5</div><div class="step-text">Tap <span class="pill-key">×</span> (red, top-left) to remove. <b>Done</b> in banner exits.</div></div>
-  </div>
-
-  <div class="reco">
-    <b>Size system</b> · S = 1×1 (172×200), M = 2×1 (353×200), L = 2×2 (353×350). Grid stays 2-col. Card title style invariant (SF Pro Display Medium 15). L cards earn space with stat-row + meta. Status-only widgets like Authenticator cap at S/M.
   </div>
 </div>
 
