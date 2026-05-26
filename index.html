@@ -277,6 +277,28 @@
     line-height: 1;
   }
   .actions-pill svg { width: 8px; height: 8px; }
+  .actions-pill.day1 {
+    background: var(--ct-color-black-05);
+    color: var(--ct-text-secondary);
+  }
+  .actions-note {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.45;
+    color: var(--ct-text-secondary);
+    margin: 0 0 var(--ct-spacing-20);
+  }
+  .actions-row .meta-muted {
+    color: var(--ct-text-secondary);
+    font-size: var(--ct-text-body-small-size);
+  }
+  .actions-row .cta {
+    color: var(--ct-brand);
+    font-size: var(--ct-text-body-small-size);
+    display: inline-flex; align-items: center; gap: 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .actions-row .cta:active { opacity: 0.6; }
   .actions-list { display: flex; flex-direction: column; }
   .actions-row {
     display: flex; justify-content: space-between; align-items: center;
@@ -469,6 +491,569 @@
   .tab.active { opacity: 1; }
   .tab svg { width: 24px; height: 24px; }
 
+  /* === VIEW TOGGLE (Day 1 / Today) === */
+  .view-toggle {
+    position: fixed;
+    top: max(env(safe-area-inset-top, 0px), 14px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    background: rgba(20,20,16,0.85);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 0.5px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    padding: 4px;
+    display: flex;
+    gap: 2px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  }
+  .vt-btn {
+    font-family: var(--ct-font-sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ct-color-grey-02);
+    background: transparent;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 220ms cubic-bezier(0.22, 1, 0.36, 1),
+                color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .vt-btn.active {
+    background: var(--ct-color-white);
+    color: var(--ct-color-grey-05);
+  }
+
+  /* View transition */
+  [data-view-content] {
+    transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-view-content][hidden] { display: none; }
+
+  /* === DAY 1 — Scan in progress card === */
+  .scan-card {
+    margin-top: 24px;
+    background: rgba(255,255,255,0.06);
+    border: 0.5px solid var(--ct-color-white-15);
+    border-radius: var(--ct-spacing-20);
+    padding: var(--ct-spacing-20);
+    width: 353px;
+    max-width: 100%;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex; flex-direction: column;
+    gap: var(--ct-spacing-20);
+  }
+  .scan-header {
+    display: flex; align-items: center; gap: var(--ct-spacing-16);
+  }
+  .scan-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--ct-brand);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .scan-icon svg { width: 20px; height: 20px; color: #fff; }
+  .scan-icon::before,
+  .scan-icon::after {
+    content: '';
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,85,12,0.5);
+    animation: scan-pulse 2.2s ease-out infinite;
+  }
+  .scan-icon::after { animation-delay: 1.1s; }
+  @keyframes scan-pulse {
+    0%   { transform: scale(1);   opacity: 0.7; }
+    100% { transform: scale(1.9); opacity: 0;   }
+  }
+  .scan-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .scan-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-color-grey-01);
+  }
+  .scan-sub {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-color-grey-03);
+  }
+  .scan-progress { display: flex; flex-direction: column; gap: 10px; }
+  .scan-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+  }
+  .scan-bar-fill {
+    display: block; height: 100%;
+    background: var(--ct-brand);
+    border-radius: 2px;
+    width: 5%;
+    animation: scan-fill 18s cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+    position: relative;
+  }
+  .scan-bar-fill::after {
+    content: '';
+    position: absolute; top: 0; right: 0;
+    width: 30px; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
+    animation: scan-shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes scan-fill {
+    0%   { width: 5%;  }
+    100% { width: 78%; }
+  }
+  @keyframes scan-shimmer {
+    0%, 100% { opacity: 0.4; }
+    50%      { opacity: 1;   }
+  }
+  .scan-meta {
+    display: flex; justify-content: space-between;
+    font-family: var(--ct-font-sans);
+    font-size: 13px;
+    color: var(--ct-color-grey-03);
+  }
+  .scan-meta .scan-count {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* === DAY 1 — Setup card === */
+  .setup-card .card-body { padding-bottom: var(--ct-spacing-8); }
+  .setup-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--ct-spacing-12);
+  }
+  .setup-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    margin: 0;
+  }
+  .setup-sub {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    margin: 6px 0 0;
+  }
+  .setup-count {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .setup-meter {
+    height: 4px;
+    background: var(--ct-color-black-05);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: var(--ct-spacing-16);
+  }
+  .setup-meter span {
+    display: block; height: 100%;
+    background: var(--ct-color-grey-05);
+    border-radius: 2px;
+    transition: width 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .setup-list {
+    display: flex; flex-direction: column;
+    margin-top: var(--ct-spacing-20);
+  }
+  .setup-item {
+    display: flex; align-items: center; gap: var(--ct-spacing-16);
+    padding: var(--ct-spacing-16) 0;
+    border-top: 0.5px solid var(--ct-divider);
+  }
+  .setup-item:first-child { border-top: none; padding-top: var(--ct-spacing-8); }
+  .setup-check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--ct-color-black-15);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: transparent;
+  }
+  .setup-check svg { width: 12px; height: 12px; }
+  .setup-item.done .setup-check {
+    background: var(--ct-status-success-solid);
+    border-color: var(--ct-status-success-solid);
+    color: #fff;
+  }
+  .setup-item-text {
+    flex: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--ct-spacing-12);
+  }
+  .setup-item-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .setup-item.done .setup-item-title {
+    color: var(--ct-text-secondary);
+    text-decoration: line-through;
+    text-decoration-color: var(--ct-color-black-15);
+    text-decoration-thickness: 0.5px;
+  }
+  .setup-item-meta {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    flex-shrink: 0;
+  }
+  .setup-item-arrow {
+    width: 16px; height: 16px;
+    color: var(--ct-text-secondary);
+    flex-shrink: 0;
+  }
+
+  /* === DAY 1 — Risk preview empty state === */
+  .risk-empty .risk-row { align-items: center; }
+  .risk-empty .risk-value {
+    color: var(--ct-text-secondary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .risk-empty .risk-value .dot-loader {
+    display: inline-flex; gap: 3px;
+  }
+  .risk-empty .risk-value .dot-loader span {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--ct-text-secondary);
+    animation: dot-blink 1.4s ease-in-out infinite;
+  }
+  .risk-empty .risk-value .dot-loader span:nth-child(2) { animation-delay: 0.18s; }
+  .risk-empty .risk-value .dot-loader span:nth-child(3) { animation-delay: 0.36s; }
+  @keyframes dot-blink {
+    0%, 80%, 100% { opacity: 0.25; }
+    40% { opacity: 1; }
+  }
+  .risk-empty-message {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.4;
+    color: var(--ct-text-secondary);
+    margin: var(--ct-spacing-16) 0 var(--ct-spacing-20);
+  }
+  .risk-empty .risk-bar-skel {
+    height: 12px;
+    border-radius: 6px;
+    background: var(--ct-color-black-05);
+    margin-top: var(--ct-spacing-8);
+    margin-bottom: var(--ct-spacing-12);
+    position: relative;
+    overflow: hidden;
+  }
+  .risk-empty .risk-bar-skel::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg,
+      transparent, rgba(20,20,16,0.06), transparent);
+    animation: skel-sweep 1.8s ease-in-out infinite;
+  }
+  @keyframes skel-sweep {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%);  }
+  }
+
+  /* === DAY 1 — "What we do" learn card === */
+  .learn-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    margin: 0 0 var(--ct-spacing-20);
+  }
+  .learn-list { display: flex; flex-direction: column; }
+  .learn-item {
+    display: flex; align-items: center; gap: var(--ct-spacing-16);
+    padding: var(--ct-spacing-16) 0;
+    border-top: 0.5px solid var(--ct-divider);
+  }
+  .learn-item:first-child { border-top: none; padding-top: var(--ct-spacing-8); }
+  .learn-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .learn-icon svg { width: 18px; height: 18px; }
+  .learn-icon.brand { background: rgba(255,85,12,0.1); color: var(--ct-brand); }
+  .learn-icon.mono  { background: var(--ct-color-black-05); color: var(--ct-text-primary); }
+  .learn-icon.identity { background: rgba(55,154,173,0.12); color: var(--ct-identity); }
+  .learn-icon.guard    { background: rgba(215,142,32,0.12); color: var(--ct-guard); }
+  .learn-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+  .learn-name {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .learn-desc {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+  }
+
+  /* === EDIT DASHBOARD MODE (iOS jiggle) === */
+  @keyframes jiggle-a {
+    0%, 100% { transform: rotate(-0.55deg) translateY(-0.4px); }
+    50%      { transform: rotate(0.55deg)  translateY(0.4px); }
+  }
+  @keyframes jiggle-b {
+    0%, 100% { transform: rotate(0.55deg)  translateY(0.4px); }
+    50%      { transform: rotate(-0.55deg) translateY(-0.4px); }
+  }
+  .dashboard .card,
+  .dashboard .add-card {
+    position: relative;
+    will-change: transform;
+  }
+  .dashboard.is-editing .card,
+  .dashboard.is-editing .add-card {
+    animation: jiggle-a 0.34s linear infinite;
+    transform-origin: center center;
+  }
+  .dashboard.is-editing .card:nth-of-type(even),
+  .dashboard.is-editing .add-card:nth-of-type(even) {
+    animation-name: jiggle-b;
+  }
+  .dashboard.is-editing .card:nth-of-type(3n)   { animation-delay: -0.05s; }
+  .dashboard.is-editing .card:nth-of-type(3n+1) { animation-delay: -0.16s; }
+  .dashboard.is-editing .card:nth-of-type(3n+2) { animation-delay: -0.27s; }
+
+  /* While editing, suppress card link navigation but keep badges tappable */
+  .dashboard.is-editing a.card { pointer-events: none; }
+  .dashboard.is-editing .edit-badge { pointer-events: auto; }
+
+  /* Let the minus badge sit outside the card edge.
+     Cards normally clip with overflow:hidden — turn that off in edit mode. */
+  .dashboard.is-editing .card { overflow: visible; }
+  /* Keep clipping during the collapse animation so contents don't leak */
+  .dashboard .card.is-removing { overflow: hidden; }
+
+  /* Minus badge in top-left of each card */
+  .edit-badge {
+    position: absolute;
+    top: -8px; left: -8px;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--ct-color-white);
+    color: rgba(20,20,16,0.55);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    padding: 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(20,20,16,0.08);
+    opacity: 0;
+    transform: scale(0);
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 180ms ease,
+                background-color 120ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .edit-badge::before {
+    content: '';
+    width: 12px; height: 1.75px;
+    background: currentColor;
+    border-radius: 1px;
+  }
+  .dashboard.is-editing .edit-badge {
+    opacity: 1;
+    transform: scale(1);
+  }
+  .edit-badge:active { transform: scale(0.85); background: #f5f4f0; }
+
+  /* Card removal animation (collapses height + scales down) */
+  .dashboard .card.is-removing {
+    animation: card-remove 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  @keyframes card-remove {
+    0%   { transform: scale(1)    rotate(0deg);  opacity: 1; max-height: 600px; margin-bottom: var(--ct-spacing-8); }
+    60%  { transform: scale(0.82) rotate(-2deg); opacity: 0; max-height: 600px; }
+    100% { transform: scale(0.82) rotate(-2deg); opacity: 0; max-height: 0;     margin-bottom: 0; padding-top: 0; padding-bottom: 0; }
+  }
+
+  /* Card add-back animation */
+  .dashboard .card.is-adding {
+    animation: card-add 360ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes card-add {
+    0%   { transform: scale(0.8);  opacity: 0; }
+    60%  { transform: scale(1.03); opacity: 1; }
+    100% { transform: scale(1);    opacity: 1; }
+  }
+
+  /* Edit button while editing */
+  .dashboard-edit.is-editing {
+    color: var(--ct-brand);
+    font-weight: 500;
+  }
+
+  /* Add-card while editing — emphasised dashed dropzone look */
+  .dashboard.is-editing .add-card {
+    background: rgba(255,85,12,0.04);
+    border: 1px dashed rgba(255,85,12,0.4);
+    color: var(--ct-brand);
+  }
+
+  /* Dashboard empty state (when every card removed) */
+  .dashboard-empty {
+    display: none;
+    text-align: center;
+    padding: 56px var(--ct-spacing-20) var(--ct-spacing-24);
+  }
+  .dashboard.is-empty .dashboard-empty { display: block; }
+  .dashboard.is-empty .add-card { margin-top: 0; }
+  .dashboard-empty-icon {
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: var(--ct-bkgd-02);
+    margin: 0 auto var(--ct-spacing-16);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ct-text-secondary);
+    box-shadow: 0 0 0 0.5px var(--ct-divider);
+  }
+  .dashboard-empty-icon svg { width: 24px; height: 24px; }
+  .dashboard-empty-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    margin: 0 0 6px;
+  }
+  .dashboard-empty-sub {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.45;
+    color: var(--ct-text-secondary);
+    margin: 0 0 var(--ct-spacing-20);
+    max-width: 280px;
+    margin-left: auto; margin-right: auto;
+  }
+
+  /* === BOTTOM SHEET (Add to dashboard) === */
+  .sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(20,20,16,0.42);
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+  .sheet-backdrop.is-open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 2001;
+    background: var(--ct-bkgd-02);
+    border-radius: 24px 24px 0 0;
+    padding: 10px var(--ct-spacing-20) max(env(safe-area-inset-bottom, 0px), var(--ct-spacing-24));
+    transform: translateY(110%);
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+    max-height: 76vh;
+    overflow-y: auto;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.25);
+    touch-action: pan-y;
+  }
+  .sheet.is-open { transform: translateY(0); }
+  .sheet-grabber {
+    width: 36px; height: 4px;
+    background: rgba(20,20,16,0.2);
+    border-radius: 2px;
+    margin: 0 auto var(--ct-spacing-16);
+  }
+  .sheet-title {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    color: var(--ct-text-primary);
+    margin: 0 0 4px;
+    text-align: center;
+  }
+  .sheet-sub {
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    color: var(--ct-text-secondary);
+    margin: 0 0 var(--ct-spacing-20);
+    text-align: center;
+  }
+  .sheet-empty {
+    text-align: center;
+    padding: 32px var(--ct-spacing-20) var(--ct-spacing-24);
+    color: var(--ct-text-secondary);
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.45;
+  }
+  .sheet-list { display: flex; flex-direction: column; gap: 8px; }
+  .sheet-item {
+    display: flex; align-items: center; gap: var(--ct-spacing-12);
+    padding: 14px var(--ct-spacing-16);
+    background: var(--ct-bkgd-01);
+    border-radius: 14px;
+    cursor: pointer;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-family: var(--ct-font-sans);
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 140ms ease;
+  }
+  .sheet-item:active { transform: scale(0.985); background: var(--ct-color-black-05); }
+  .sheet-item-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--ct-bkgd-02);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--ct-text-primary);
+    box-shadow: 0 0 0 0.5px var(--ct-divider);
+  }
+  .sheet-item-icon svg { width: 18px; height: 18px; }
+  .sheet-item-text { flex: 1; min-width: 0; }
+  .sheet-item-name {
+    display: block;
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+  }
+  .sheet-item-desc {
+    display: block;
+    font-size: var(--ct-text-body-small-size);
+    line-height: 1.3;
+    color: var(--ct-text-secondary);
+    margin-top: 2px;
+  }
+  .sheet-item-add {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--ct-brand);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .sheet-item-add svg { width: 14px; height: 14px; }
+
   /* === MOBILE: edge-to-edge, trim baked-in 54px ===
      Figma bakes ~54px of iOS status-bar space into the design's top padding.
      On real devices iOS adds env(safe-area-inset-top) on top of that, doubling.
@@ -499,7 +1084,16 @@
 </head>
 <body>
 
-<div class="phone">
+<!-- View toggle (Day 1 / Today) -->
+<div class="view-toggle" role="tablist" aria-label="Switch homepage view">
+  <button class="vt-btn" data-view="day1" role="tab" aria-selected="false">Day 1</button>
+  <button class="vt-btn active" data-view="today" role="tab" aria-selected="true">Today</button>
+</div>
+
+<!-- ============================================================ -->
+<!-- TODAY VIEW (post-explore homepage)                            -->
+<!-- ============================================================ -->
+<div class="phone" data-view-content="today">
 
   <!-- HERO -->
   <section class="hero">
@@ -532,11 +1126,26 @@
   <section class="dashboard">
     <header class="dashboard-header">
       <span class="dashboard-title">Dashboard</span>
-      <button class="dashboard-edit">Edit</button>
+      <button class="dashboard-edit" type="button">Edit</button>
     </header>
 
+    <!-- Empty state (shown only when all cards removed) -->
+    <div class="dashboard-empty" aria-hidden="true">
+      <div class="dashboard-empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <p class="dashboard-empty-title">Your dashboard is empty</p>
+      <p class="dashboard-empty-sub">Tap <em>+ Add to dashboard</em> below to bring cards back.</p>
+    </div>
+
     <!-- Digital risk -->
-    <a class="card risk-card" href="digital-risk.html">
+    <a class="card risk-card" href="digital-risk.html"
+       data-card-id="risk" data-card-name="Digital risk" data-card-desc="Live risk score across data brokers" data-card-icon="risk">
       <div class="card-body">
         <div class="risk-row">
           <span class="risk-title">Digital risk</span>
@@ -553,7 +1162,8 @@
     </a>
 
     <!-- Actions -->
-    <a class="card" href="actions.html">
+    <a class="card" href="actions.html"
+       data-card-id="actions" data-card-name="Actions taken to protect you" data-card-desc="Removals, blocks, identities" data-card-icon="actions">
       <div class="card-body">
         <p class="actions-title">Actions taken to protect you</p>
         <div class="actions-headline">
@@ -575,7 +1185,8 @@
     </a>
 
     <!-- Recent activity -->
-    <div class="card">
+    <div class="card"
+         data-card-id="activity" data-card-name="Recent activity" data-card-desc="Latest removals and scans" data-card-icon="activity">
       <div class="card-body">
         <p class="activity-title">Recent activity</p>
 
@@ -734,6 +1345,595 @@
   </nav>
 
 </div>
+
+<!-- ============================================================ -->
+<!-- DAY 1 VIEW (first-time experience — scan in progress)        -->
+<!-- ============================================================ -->
+<div class="phone" data-view-content="day1" hidden>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bar">
+      <span class="hero-logo">Cloaked</span>
+      <div class="hero-menu" aria-label="Menu">
+        <span></span><span></span>
+      </div>
+    </div>
+
+    <h1 class="hero-greeting">
+      Welcome, Christine. <span class="dim">Let's see what's out there.</span>
+    </h1>
+
+    <!-- Initial scan in progress -->
+    <div class="scan-card" aria-live="polite">
+      <div class="scan-header">
+        <div class="scan-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="1.75"/>
+            <path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="scan-text">
+          <span class="scan-title">Initial scan</span>
+          <span class="scan-sub">Scanning the web for your data</span>
+        </div>
+      </div>
+      <div class="scan-progress">
+        <div class="scan-bar" aria-hidden="true">
+          <span class="scan-bar-fill"></span>
+        </div>
+        <div class="scan-meta">
+          <span class="scan-count"><span id="scanCount">12</span> of 247 brokers</span>
+          <span>~4 min left</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="dashboard">
+    <header class="dashboard-header">
+      <span class="dashboard-title">Get started</span>
+      <button class="dashboard-edit" type="button">Edit</button>
+    </header>
+
+    <!-- Empty state -->
+    <div class="dashboard-empty" aria-hidden="true">
+      <div class="dashboard-empty-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <p class="dashboard-empty-title">Nothing on your dashboard yet</p>
+      <p class="dashboard-empty-sub">Add cards below to start tracking what matters most.</p>
+    </div>
+
+    <!-- Setup checklist -->
+    <div class="card setup-card"
+         data-card-id="setup" data-card-name="Quick setup" data-card-desc="4 steps · less than 5 minutes" data-card-icon="setup">
+      <div class="card-body">
+        <div class="setup-head">
+          <div>
+            <p class="setup-title">Quick setup</p>
+            <p class="setup-sub">Less than 5 minutes total</p>
+          </div>
+          <span class="setup-count">1 / 4</span>
+        </div>
+
+        <div class="setup-meter" aria-hidden="true">
+          <span style="width:25%"></span>
+        </div>
+
+        <div class="setup-list">
+          <div class="setup-item done">
+            <div class="setup-check" aria-hidden="true">
+              <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M2.5 6.5l2.5 2.5L9.5 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="setup-item-text">
+              <span class="setup-item-title">Account created</span>
+              <span class="setup-item-meta">Just now</span>
+            </div>
+          </div>
+
+          <div class="setup-item">
+            <div class="setup-check" aria-hidden="true"></div>
+            <div class="setup-item-text">
+              <span class="setup-item-title">Verify your email</span>
+              <span class="setup-item-meta">1 min</span>
+            </div>
+          </div>
+
+          <div class="setup-item">
+            <div class="setup-check" aria-hidden="true"></div>
+            <div class="setup-item-text">
+              <span class="setup-item-title">Add your phone number</span>
+              <span class="setup-item-meta">1 min</span>
+            </div>
+          </div>
+
+          <div class="setup-item">
+            <div class="setup-check" aria-hidden="true"></div>
+            <div class="setup-item-text">
+              <span class="setup-item-title">Block your first spammer</span>
+              <span class="setup-item-meta">30 sec</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Digital risk — pre-scan empty state -->
+    <div class="card risk-card risk-empty"
+         data-card-id="risk" data-card-name="Digital risk" data-card-desc="Risk score (calculating on Day 1)" data-card-icon="risk">
+      <div class="card-body">
+        <div class="risk-row">
+          <span class="risk-title">Digital risk</span>
+          <span class="risk-value">
+            Calculating
+            <span class="dot-loader" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </span>
+          </span>
+        </div>
+        <div class="risk-bar-skel" aria-hidden="true"></div>
+        <p class="risk-empty-message">
+          Hang tight — we'll show your first risk score the moment the scan finishes.
+        </p>
+      </div>
+    </div>
+
+    <!-- Actions taken to protect you — Day 1 empty state -->
+    <a class="card" href="actions.html"
+       data-card-id="actions" data-card-name="Actions taken to protect you" data-card-desc="Removals, blocks, identities" data-card-icon="actions">
+      <div class="card-body">
+        <p class="actions-title">Actions taken to protect you</p>
+        <div class="actions-headline">
+          <span class="actions-number">0</span>
+          <span class="actions-pill day1">Day 1</span>
+        </div>
+        <p class="actions-note">First removals usually start in 7&ndash;14 days. We&rsquo;ll update this card as they happen.</p>
+        <div class="actions-list">
+          <div class="actions-row">
+            <span>Data removed</span>
+            <span class="meta-muted">Starts in 7&ndash;14 days</span>
+          </div>
+          <div class="actions-row">
+            <span>Spam blocked</span>
+            <span class="cta">Turn on &rarr;</span>
+          </div>
+          <div class="actions-row">
+            <span>Identity created</span>
+            <span class="cta">Create first &rarr;</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-link">See details</div>
+    </a>
+
+    <!-- Add to dashboard -->
+    <div class="add-card" role="button" tabindex="0">+ Add to dashboard</div>
+  </section>
+
+  <!-- ASK AI — onboarding-flavored -->
+  <section class="ask-ai">
+    <header class="ask-ai-header">
+      <span class="ask-ai-title">Ask AI</span>
+      <button class="ask-ai-filter">All ▾</button>
+    </header>
+    <div class="ai-scroll">
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Getting Started</div>
+          <p class="ai-question">What is data removal, exactly?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">First Results</div>
+          <p class="ai-question">How long until I see results?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Coverage</div>
+          <p class="ai-question">Which sites do you remove from?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Trust</div>
+          <p class="ai-question">How is my data kept safe with you?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <div class="ai-card">
+        <div>
+          <div class="ai-tag">Family</div>
+          <p class="ai-question">Can my family use Cloaked too?</p>
+        </div>
+        <div class="ai-arrow">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB BAR -->
+  <nav class="tabbar">
+    <div class="tab active" aria-label="Home">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V11z" fill="currentColor"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Stats">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M4 20V10M10 20V4M16 20v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Identities">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="4" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="3" y="14" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Protection">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 3l8 3v6c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V6l8-3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div class="tab" aria-label="Vault">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="11" width="16" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+    </div>
+  </nav>
+
+</div>
+
+<!-- ============================================================ -->
+<!-- BOTTOM SHEET — Add to dashboard                              -->
+<!-- ============================================================ -->
+<div class="sheet-backdrop" id="sheetBackdrop" aria-hidden="true"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+  <div class="sheet-grabber" aria-hidden="true"></div>
+  <p class="sheet-title" id="sheetTitle">Add to dashboard</p>
+  <p class="sheet-sub">Tap a card to add it back.</p>
+  <div class="sheet-empty" id="sheetEmpty" style="display:none;">
+    All cards are already on your dashboard.<br>
+    Tap <em>Edit</em> to remove ones you don't need.
+  </div>
+  <div class="sheet-list" id="sheetList"></div>
+</div>
+
+<script>
+  (function () {
+    var KEY = 'cloaked.homeView';
+    var btns  = document.querySelectorAll('.vt-btn');
+    var views = document.querySelectorAll('[data-view-content]');
+
+    function setView(view) {
+      btns.forEach(function (b) {
+        var on = b.dataset.view === view;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      views.forEach(function (v) {
+        var on = v.dataset.viewContent === view;
+        if (on) {
+          v.hidden = false;
+          // restart scan-bar fill animation when switching back to Day 1
+          if (view === 'day1') {
+            var fill = v.querySelector('.scan-bar-fill');
+            if (fill) {
+              fill.style.animation = 'none';
+              // force reflow
+              void fill.offsetWidth;
+              fill.style.animation = '';
+            }
+          }
+        } else {
+          v.hidden = true;
+        }
+      });
+      try { localStorage.setItem(KEY, view); } catch (e) {}
+      // haptic
+      if (navigator.vibrate) navigator.vibrate(8);
+    }
+
+    btns.forEach(function (b) {
+      b.addEventListener('click', function () { setView(b.dataset.view); });
+    });
+
+    // Restore last view (default: today)
+    try {
+      var saved = localStorage.getItem(KEY);
+      if (saved === 'day1' || saved === 'today') setView(saved);
+    } catch (e) {}
+
+    // Animate the "12 of 247" counter alongside the scan-fill animation
+    var scanCount = document.getElementById('scanCount');
+    if (scanCount) {
+      var start = 12, end = 192, duration = 18000, startTime = null;
+      function tick(now) {
+        if (startTime === null) startTime = now;
+        var t = Math.min(1, (now - startTime) / duration);
+        // ease matches CSS cubic-bezier(0.4, 0, 0.2, 1) approximately
+        var eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        scanCount.textContent = Math.round(start + (end - start) * eased);
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+  })();
+
+  // ============================================================
+  // EDIT DASHBOARD MODE — iOS-style jiggle, minus badges,
+  // remove/restore animations, bottom-sheet to add back.
+  // ============================================================
+  (function () {
+    var STORE_KEY = 'cloaked.dashboard.removed.v1';
+
+    // Per-view restore map so the sheet can reach the right dashboard
+    var restoreFns = {};
+    var refreshEmptyFns = {};
+
+    // ---- haptic (iOS Safari switch trick + navigator.vibrate fallback) ----
+    function haptic(ms) {
+      try { if (navigator.vibrate) navigator.vibrate(ms || 8); } catch (e) {}
+      var label = document.createElement('label');
+      label.style.cssText = 'position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.setAttribute('switch', '');
+      label.appendChild(input);
+      document.body.appendChild(label);
+      try { label.click(); } catch (e) {}
+      setTimeout(function () { label.remove(); }, 60);
+    }
+
+    // ---- persistence ----
+    function getRemovedMap() {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); }
+      catch (e) { return {}; }
+    }
+    function getRemoved(view) { return getRemovedMap()[view] || []; }
+    function setRemoved(view, arr) {
+      var all = getRemovedMap();
+      all[view] = arr;
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); } catch (e) {}
+    }
+
+    // ---- icons for sheet ----
+    var ICONS = {
+      risk: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l8 4v5c0 4.5-3.4 8.5-8 9-4.6-.5-8-4.5-8-9V7l8-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 8v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      actions: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V11M10 20V5M16 20v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
+      activity: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h4l3-7 4 14 3-7h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+      setup: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    };
+    function iconFor(name) { return ICONS[name] || ICONS.actions; }
+
+    // ---- bottom sheet ----
+    var backdrop = document.getElementById('sheetBackdrop');
+    var sheet    = document.getElementById('sheet');
+    var sheetList  = document.getElementById('sheetList');
+    var sheetEmpty = document.getElementById('sheetEmpty');
+
+    function openSheet(view) {
+      populateSheet(view);
+      backdrop.classList.add('is-open');
+      sheet.classList.add('is-open');
+      sheet.setAttribute('aria-hidden', 'false');
+      backdrop.setAttribute('aria-hidden', 'false');
+      haptic(8);
+    }
+    function closeSheet() {
+      backdrop.classList.remove('is-open');
+      sheet.classList.remove('is-open');
+      sheet.setAttribute('aria-hidden', 'true');
+      backdrop.setAttribute('aria-hidden', 'true');
+    }
+    function populateSheet(view) {
+      var removed = getRemoved(view);
+      sheetList.innerHTML = '';
+      if (!removed.length) {
+        sheetEmpty.style.display = 'block';
+        sheetList.style.display = 'none';
+        return;
+      }
+      sheetEmpty.style.display = 'none';
+      sheetList.style.display = '';
+      removed.forEach(function (id) {
+        var card = document.querySelector('[data-view-content="' + view + '"] .card[data-card-id="' + id + '"]');
+        if (!card) return;
+        var item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'sheet-item';
+        item.innerHTML =
+          '<span class="sheet-item-icon">' + iconFor(card.dataset.cardIcon) + '</span>' +
+          '<span class="sheet-item-text">' +
+            '<span class="sheet-item-name">' + (card.dataset.cardName || id) + '</span>' +
+            (card.dataset.cardDesc ? '<span class="sheet-item-desc">' + card.dataset.cardDesc + '</span>' : '') +
+          '</span>' +
+          '<span class="sheet-item-add" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg></span>';
+        item.addEventListener('click', function () {
+          if (restoreFns[view]) restoreFns[view](card);
+          haptic(10);
+          populateSheet(view);
+          if (!getRemoved(view).length) closeSheet();
+        });
+        sheetList.appendChild(item);
+      });
+    }
+
+    backdrop.addEventListener('click', closeSheet);
+
+    // Drag the sheet down to close
+    var startY = null, dragging = false;
+    sheet.addEventListener('pointerdown', function (e) {
+      if (sheet.scrollTop > 0) return;
+      startY = e.clientY; dragging = true;
+    });
+    sheet.addEventListener('pointermove', function (e) {
+      if (!dragging || startY === null) return;
+      var dy = e.clientY - startY;
+      if (dy > 0) {
+        sheet.style.transition = 'none';
+        sheet.style.transform = 'translateY(' + dy + 'px)';
+      }
+    });
+    function endDrag(e) {
+      if (!dragging) return;
+      dragging = false;
+      var dy = (e && e.clientY != null) ? e.clientY - startY : 0;
+      sheet.style.transition = '';
+      sheet.style.transform = '';
+      startY = null;
+      if (dy > 110) closeSheet();
+    }
+    sheet.addEventListener('pointerup', endDrag);
+    sheet.addEventListener('pointercancel', endDrag);
+
+    // ---- per-dashboard wiring ----
+    document.querySelectorAll('[data-view-content] .dashboard').forEach(function (dashboard) {
+      var view = dashboard.closest('[data-view-content]').dataset.viewContent;
+      var editBtn = dashboard.querySelector('.dashboard-edit');
+      var addBtn  = dashboard.querySelector('.add-card');
+
+      function refreshEmpty() {
+        var visible = 0;
+        dashboard.querySelectorAll('.card[data-card-id]').forEach(function (c) {
+          if (c.style.display !== 'none') visible++;
+        });
+        dashboard.classList.toggle('is-empty', visible === 0);
+      }
+      refreshEmptyFns[view] = refreshEmpty;
+
+      // Restore removed state from storage
+      getRemoved(view).forEach(function (id) {
+        var card = dashboard.querySelector('.card[data-card-id="' + id + '"]');
+        if (card) card.style.display = 'none';
+      });
+      refreshEmpty();
+
+      function removeCard(card) {
+        haptic(14);
+        card.style.maxHeight = card.offsetHeight + 'px';
+        card.classList.add('is-removing');
+        card.addEventListener('animationend', function onEnd() {
+          card.style.display = 'none';
+          card.style.maxHeight = '';
+          card.classList.remove('is-removing');
+          var removed = getRemoved(view);
+          if (removed.indexOf(card.dataset.cardId) < 0) {
+            removed.push(card.dataset.cardId);
+            setRemoved(view, removed);
+          }
+          refreshEmpty();
+          card.removeEventListener('animationend', onEnd);
+        });
+      }
+
+      function restoreCard(card) {
+        card.style.display = '';
+        void card.offsetWidth;
+        card.classList.add('is-adding');
+        card.addEventListener('animationend', function onEnd() {
+          card.classList.remove('is-adding');
+          card.removeEventListener('animationend', onEnd);
+        });
+        var removed = getRemoved(view).filter(function (id) { return id !== card.dataset.cardId; });
+        setRemoved(view, removed);
+        refreshEmpty();
+      }
+      restoreFns[view] = restoreCard;
+
+      // Add minus badge to every card
+      dashboard.querySelectorAll('.card[data-card-id]').forEach(function (card) {
+        var badge = document.createElement('button');
+        badge.type = 'button';
+        badge.className = 'edit-badge';
+        badge.setAttribute('aria-label', 'Remove ' + (card.dataset.cardName || 'card') + ' from dashboard');
+        card.appendChild(badge);
+        badge.addEventListener('click', function (e) {
+          e.preventDefault(); e.stopPropagation();
+          removeCard(card);
+        });
+      });
+
+      // Edit toggle
+      function setEditing(on) {
+        dashboard.classList.toggle('is-editing', on);
+        if (editBtn) {
+          editBtn.textContent = on ? 'Done' : 'Edit';
+          editBtn.classList.toggle('is-editing', on);
+        }
+        haptic(on ? 12 : 6);
+      }
+      if (editBtn) {
+        editBtn.addEventListener('click', function () {
+          setEditing(!dashboard.classList.contains('is-editing'));
+        });
+      }
+
+      // Long-press a card to enter edit mode (iOS-style)
+      dashboard.querySelectorAll('.card[data-card-id]').forEach(function (card) {
+        var lp = null, lpStart = null;
+        card.addEventListener('pointerdown', function (e) {
+          if (dashboard.classList.contains('is-editing')) return;
+          lpStart = { x: e.clientX, y: e.clientY };
+          lp = setTimeout(function () {
+            setEditing(true);
+            lp = null;
+          }, 500);
+        });
+        function cancelLp(e) {
+          if (lp) { clearTimeout(lp); lp = null; }
+          if (e && lpStart && (Math.abs(e.clientX - lpStart.x) > 8 || Math.abs(e.clientY - lpStart.y) > 8)) {
+            if (lp) { clearTimeout(lp); lp = null; }
+          }
+        }
+        card.addEventListener('pointerup', cancelLp);
+        card.addEventListener('pointermove', cancelLp);
+        card.addEventListener('pointercancel', cancelLp);
+      });
+
+      // Add to dashboard → open sheet
+      if (addBtn) {
+        addBtn.addEventListener('click', function () { openSheet(view); });
+        addBtn.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSheet(view); }
+        });
+      }
+    });
+  })();
+</script>
 
 </body>
 </html>
