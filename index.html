@@ -529,15 +529,33 @@
     cursor: default;
   }
   /* Hide toggle when the Add-to-dashboard catalog page is open so it
-     doesn't sit on top of widgets the user is trying to tap. */
+     doesn't sit on top of widgets the user is trying to tap. Body class
+     toggled from openAddPage/closeAddPage — more reliable than :has(). */
   .version-toggle {
     transition: opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
                 transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   }
-  body:has(.add-page.is-open) .version-toggle {
+  body.add-open .version-toggle {
     opacity: 0;
     pointer-events: none;
     transform: translateX(-50%) translateY(12px);
+  }
+
+  /* iOS: disable native text-selection callout on the phone so long-press
+     to drag-reorder doesn't trigger the "Select / Copy" UI on card labels.
+     Inputs/textareas opt back in. */
+  body, .phone, .phone * {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input, textarea, [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  /* Buttons + cards: kill 300ms tap delay, prevent double-tap zoom. */
+  button, .card, .add-widget, .add-card {
+    touch-action: manipulation;
   }
 
   /* View transition */
@@ -2196,6 +2214,7 @@
 
     function openAddPage(view) {
       currentAddView = view;
+      document.body.classList.add('add-open');  // hide version-toggle
       addPage.classList.add('is-open');
       addPage.setAttribute('aria-hidden', 'false');
       refreshAddedMarkers(view);
@@ -2205,6 +2224,7 @@
       haptic(8);
     }
     function closeAddPage() {
+      document.body.classList.remove('add-open'); // restore version-toggle
       addPage.classList.remove('is-open');
       addPage.setAttribute('aria-hidden', 'true');
       currentAddView = null;
