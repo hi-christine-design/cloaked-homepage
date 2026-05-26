@@ -1074,12 +1074,67 @@
     height: 49px;
     padding: 0 var(--ct-spacing-20);
     display: flex; align-items: center;
+    gap: 10px;
     font-family: var(--ct-font-sans);
     font-weight: 400;
     font-size: 16px;
     line-height: 1.3;
     color: #84827E;
   }
+  .add-page-search-icon {
+    width: 18px; height: 18px;
+    color: #84827E;
+    flex-shrink: 0;
+    display: block;
+  }
+  .add-page-search-input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    outline: none;
+    font: inherit;
+    color: var(--ct-text-primary);
+    padding: 0;
+    margin: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    line-height: 49px; /* vertically center input text */
+  }
+  .add-page-search-input::placeholder { color: #84827E; opacity: 1; }
+  .add-page-search-input::-webkit-search-cancel-button,
+  .add-page-search-input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    display: none;
+  }
+  .add-page-search-clear {
+    width: 22px; height: 22px;
+    background: none; border: none;
+    padding: 0; color: #84827E;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+    display: block;
+  }
+  .add-page-search-clear[hidden] { display: none; }
+  .add-page-search-clear svg { width: 100%; height: 100%; display: block; }
+
+  /* Filter states: hide widgets/rows/sections that don't match query */
+  .add-widget.is-filtered-out { display: none !important; }
+  .add-page-row.is-filtered-out { display: none !important; }
+  .add-page-section.is-filtered-out { display: none !important; }
+
+  /* Empty state when nothing matches */
+  .add-page-empty {
+    padding: 60px var(--ct-spacing-20) 80px;
+    text-align: center;
+    color: #84827E;
+    font-family: var(--ct-font-sans);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .add-page-empty[hidden] { display: none; }
+  .add-page-empty strong { color: var(--ct-text-primary); font-weight: 500; }
 
   /* Sections:
      - First titled section: 49px from search bottom (Figma 279-230)
@@ -2040,7 +2095,29 @@
     <button class="add-page-close" type="button" id="addPageClose">Close</button>
   </header>
 
-  <div class="add-page-search" aria-hidden="true">Search widgets</div>
+  <div class="add-page-search" role="search">
+    <svg class="add-page-search-icon" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="8" cy="8" r="5.25" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M12 12l3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    <input
+      type="search"
+      id="addPageSearchInput"
+      class="add-page-search-input"
+      placeholder="Search widgets"
+      autocomplete="off"
+      autocorrect="off"
+      autocapitalize="none"
+      spellcheck="false"
+      enterkeyhint="search"
+      aria-label="Search widgets" />
+    <button type="button" class="add-page-search-clear" id="addPageSearchClear" aria-label="Clear search" hidden>
+      <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="9" cy="9" r="9" fill="currentColor" opacity="0.22"/>
+        <path d="M6 6l6 6M12 6l-6 6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
 
   <!-- Monitoring data -->
   <section class="add-page-section">
@@ -2253,6 +2330,10 @@
       </button>
     </div>
   </section>
+
+  <div class="add-page-empty" id="addPageEmpty" hidden>
+    No widgets match <strong id="addPageEmptyQuery"></strong>.
+  </div>
 </div>
 
 <script>
@@ -2417,6 +2498,7 @@
       addPage.setAttribute('aria-hidden', 'false');
       refreshAddedMarkers(view);
       try { addPage.scrollTop = 0; } catch (e) {}
+      resetSearch();
       suppressClicksFor(450);   // slide-up is 420ms — eat any ghost click
       haptic(8);
     }
@@ -2424,10 +2506,124 @@
       addPage.classList.remove('is-open');
       addPage.setAttribute('aria-hidden', 'true');
       currentAddView = null;
+      resetSearch();
       suppressClicksFor(500);   // slide-down + ghost-click delay
     }
 
     if (addPageClose) addPageClose.addEventListener('click', closeAddPage);
+
+    // ===== Search widgets =====
+    // Filter catalog widgets by title / section / list-item / id substring.
+    // Build a searchable index once (lowercase + NFC normalized for Korean
+    // composed/decomposed form parity) and re-apply on every input event.
+    var searchInput  = document.getElementById('addPageSearchInput');
+    var searchClear  = document.getElementById('addPageSearchClear');
+    var emptyState   = document.getElementById('addPageEmpty');
+    var emptyQueryEl = document.getElementById('addPageEmptyQuery');
+    var isComposing  = false;   // IME composition (Korean/CJK) in progress
+
+    function norm(s) {
+      try { return (s || '').normalize('NFC').toLowerCase().trim(); }
+      catch (e) { return (s || '').toLowerCase().trim(); }
+    }
+
+    // Cache index: each widget gets data-search-text once at startup.
+    addPage.querySelectorAll('.add-widget').forEach(function (w) {
+      var section = w.closest('.add-page-section');
+      var sectionTitle = section ? (section.querySelector('.add-page-section-title') || {}).textContent : '';
+      var title = (w.querySelector('.add-widget-title') || {}).textContent || '';
+      var body  = (w.querySelector('.add-widget-body')  || {}).textContent || '';
+      var listText = Array.prototype.map.call(
+        w.querySelectorAll('.add-list-name, .add-list-sub'),
+        function (el) { return el.textContent; }
+      ).join(' ');
+      var id = w.dataset.addId || '';
+      w.dataset.searchText = norm([sectionTitle, title, body, listText, id].join(' '));
+    });
+
+    function applyFilter(rawQuery) {
+      var q = norm(rawQuery);
+      var hasQuery = q.length > 0;
+
+      // Toggle clear button
+      if (searchClear) searchClear.hidden = !hasQuery;
+
+      var totalVisible = 0;
+
+      addPage.querySelectorAll('.add-page-section').forEach(function (section) {
+        var sectionVisible = 0;
+
+        section.querySelectorAll('.add-page-row').forEach(function (row) {
+          var rowVisible = 0;
+          row.querySelectorAll('.add-widget').forEach(function (w) {
+            var match = !hasQuery || (w.dataset.searchText || '').indexOf(q) !== -1;
+            w.classList.toggle('is-filtered-out', !match);
+            if (match) rowVisible++;
+          });
+          row.classList.toggle('is-filtered-out', rowVisible === 0);
+          sectionVisible += rowVisible;
+        });
+
+        // Sections like Call & Message / Mailbox have widgets directly (no .add-page-row)
+        section.querySelectorAll(':scope > .add-widget').forEach(function (w) {
+          var match = !hasQuery || (w.dataset.searchText || '').indexOf(q) !== -1;
+          w.classList.toggle('is-filtered-out', !match);
+          if (match) sectionVisible++;
+        });
+
+        section.classList.toggle('is-filtered-out', sectionVisible === 0);
+        totalVisible += sectionVisible;
+      });
+
+      if (emptyState) {
+        var showEmpty = hasQuery && totalVisible === 0;
+        emptyState.hidden = !showEmpty;
+        if (showEmpty && emptyQueryEl) {
+          emptyQueryEl.textContent = '“' + rawQuery.trim() + '”';
+        }
+      }
+    }
+
+    function resetSearch() {
+      if (!searchInput) return;
+      searchInput.value = '';
+      isComposing = false;
+      applyFilter('');
+      try { searchInput.blur(); } catch (e) {}
+    }
+
+    if (searchInput) {
+      // During IME composition (Korean Hangul, Japanese, Chinese), the input
+      // event fires with intermediate jamo — wait for compositionend before
+      // filtering to avoid jarring mid-syllable mismatches.
+      searchInput.addEventListener('compositionstart', function () { isComposing = true; });
+      searchInput.addEventListener('compositionend', function (e) {
+        isComposing = false;
+        applyFilter(searchInput.value);
+      });
+      searchInput.addEventListener('input', function () {
+        if (isComposing) return;
+        applyFilter(searchInput.value);
+      });
+      // ESC clears; Enter dismisses keyboard on mobile.
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          if (searchInput.value) { searchInput.value = ''; applyFilter(''); }
+          else { try { searchInput.blur(); } catch (err) {} }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          try { searchInput.blur(); } catch (err) {}
+        }
+      });
+    }
+    if (searchClear) {
+      searchClear.addEventListener('click', function () {
+        searchInput.value = '';
+        applyFilter('');
+        try { searchInput.focus(); } catch (e) {}
+      });
+    }
 
     // Map widget id → existing dashboard card id (where there's a meaningful match)
     var WIDGET_TO_CARD = {
