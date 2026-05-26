@@ -2353,6 +2353,58 @@
       try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); } catch (e) {}
     }
 
+    // Added widgets (newly-added catalog items not in original HTML)
+    var ADDED_KEY = 'cloaked.dashboard.added.v1';
+    function getAddedMap() {
+      try { return JSON.parse(localStorage.getItem(ADDED_KEY) || '{}'); }
+      catch (e) { return {}; }
+    }
+    function getAdded(view) { return getAddedMap()[view] || []; }
+    function setAdded(view, arr) {
+      var all = getAddedMap();
+      all[view] = arr;
+      try { localStorage.setItem(ADDED_KEY, JSON.stringify(all)); } catch (e) {}
+    }
+    function recordAdded(view, widgetId) {
+      var arr = getAdded(view);
+      if (arr.indexOf(widgetId) < 0) {
+        arr.push(widgetId);
+        setAdded(view, arr);
+      }
+    }
+    function forgetAdded(view, widgetId) {
+      var arr = getAdded(view).filter(function (id) { return id !== widgetId; });
+      setAdded(view, arr);
+    }
+
+    // ---- Ghost-click guard ----
+    // iOS Safari fires a delayed click ~300ms after touchend at the original
+    // touch position. When the catalog page slides away, that delayed click
+    // can land on a dashboard card behind it — navigating into a detail page
+    // or removing a freshly-added card. Block clicks during the transition.
+    var suppressClicks = false;
+    var suppressTimer = null;
+    function suppressClicksFor(ms) {
+      suppressClicks = true;
+      if (suppressTimer) clearTimeout(suppressTimer);
+      suppressTimer = setTimeout(function () {
+        suppressClicks = false;
+        suppressTimer = null;
+      }, ms);
+    }
+    document.addEventListener('click', function (e) {
+      if (suppressClicks) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+      }
+    }, true);  // capture phase — intercepts before anything else
+    // touchend can also fire on the wrong target after transitions; the click
+    // listener above is what matters, but suppress touchend bubbling too.
+    document.addEventListener('touchend', function (e) {
+      if (suppressClicks) e.preventDefault();
+    }, { capture: true, passive: false });
+
     // ---- Add to dashboard page ----
     var addPage = document.getElementById('addPage');
     var addPageClose = document.getElementById('addPageClose');
@@ -2365,12 +2417,14 @@
       addPage.setAttribute('aria-hidden', 'false');
       refreshAddedMarkers(view);
       try { addPage.scrollTop = 0; } catch (e) {}
+      suppressClicksFor(450);   // slide-up is 420ms — eat any ghost click
       haptic(8);
     }
     function closeAddPage() {
       addPage.classList.remove('is-open');
       addPage.setAttribute('aria-hidden', 'true');
       currentAddView = null;
+      suppressClicksFor(500);   // slide-down + ghost-click delay
     }
 
     if (addPageClose) addPageClose.addEventListener('click', closeAddPage);
@@ -2434,8 +2488,10 @@
       return card;
     }
 
-    // Try to add (or restore) a widget to the dashboard
-    function addOrRestore(view, widgetId, widget) {
+    // Try to add (or restore) a widget to the dashboard.
+    // skipAnim=true is used on init when restoring persisted widgets so we
+    // don't show the spring-in animation for every saved card.
+    function addOrRestore(view, widgetId, widget, skipAnim) {
       var dashboard = document.querySelector('[data-view-content="' + view + '"] .dashboard');
       if (!dashboard) return false;
 
@@ -2446,6 +2502,7 @@
       if (card) {
         if (card.style.display === 'none') {
           if (restoreFns[view]) restoreFns[view](card);
+          if (mappedId.indexOf('widget-') === 0) recordAdded(view, widgetId);
           return true;
         }
         // already on dashboard — no-op
@@ -2460,20 +2517,28 @@
 
       if (wireCardFns[view]) wireCardFns[view](card);
 
-      // entry animation (same as restoreCard)
-      void card.offsetWidth;
-      card.classList.add('is-adding');
-      card.addEventListener('animationend', function onEnd() {
-        card.classList.remove('is-adding');
-        card.removeEventListener('animationend', onEnd);
-      });
+      // Remember that this widget was added so it survives a page reload
+      recordAdded(view, widgetId);
+
+      if (!skipAnim) {
+        // entry animation (same as restoreCard)
+        void card.offsetWidth;
+        card.classList.add('is-adding');
+        card.addEventListener('animationend', function onEnd() {
+          card.classList.remove('is-adding');
+          card.removeEventListener('animationend', onEnd);
+        });
+      }
       // empty-state refresh
       if (refreshEmptyFns[view]) refreshEmptyFns[view]();
       return true;
     }
 
     addPage.querySelectorAll('.add-widget').forEach(function (w) {
-      w.addEventListener('click', function () {
+      w.addEventListener('click', function (e) {
+        // Stop this click from bubbling/propagating further before we
+        // also turn on the global suppressClicks flag for the transition.
+        e.stopPropagation();
         var view = currentAddView;
         if (!view) return;
         var added = addOrRestore(view, w.dataset.addId, w);
@@ -2509,13 +2574,23 @@
         card.style.maxHeight = card.offsetHeight + 'px';
         card.classList.add('is-removing');
         card.addEventListener('animationend', function onEnd() {
-          card.style.display = 'none';
-          card.style.maxHeight = '';
-          card.classList.remove('is-removing');
-          var removed = getRemoved(view);
-          if (removed.indexOf(card.dataset.cardId) < 0) {
-            removed.push(card.dataset.cardId);
-            setRemoved(view, removed);
+          var cardId = card.dataset.cardId;
+          // Widget cards (added via the catalog) get fully detached so they
+          // don't reappear on next reload. Built-in cards are just hidden so
+          // they can be restored from the removed list.
+          if (cardId && cardId.indexOf('widget-') === 0) {
+            var widgetId = cardId.slice('widget-'.length);
+            forgetAdded(view, widgetId);
+            card.parentNode && card.parentNode.removeChild(card);
+          } else {
+            card.style.display = 'none';
+            card.style.maxHeight = '';
+            card.classList.remove('is-removing');
+            var removed = getRemoved(view);
+            if (removed.indexOf(cardId) < 0) {
+              removed.push(cardId);
+              setRemoved(view, removed);
+            }
           }
           refreshEmpty();
           card.removeEventListener('animationend', onEnd);
@@ -2567,24 +2642,41 @@
         attachDrag(row.querySelector('.compact-handle'), card);
 
         // Long-press to enter edit mode
-        var lp = null, lpStart = null;
+        var lp = null, lpStart = null, lpFired = false;
         card.addEventListener('pointerdown', function (e) {
           if (dashboard.classList.contains('is-editing')) return;
           lpStart = { x: e.clientX, y: e.clientY };
+          lpFired = false;
           lp = setTimeout(function () {
             setEditing(true);
+            lpFired = true;
             lp = null;
+            // The click that follows a successful long-press would otherwise
+            // navigate <a class="card"> to the detail page. Suppress it.
+            suppressClicksFor(400);
           }, 500);
         });
-        function cancelLp(e) {
-          if (lp) { clearTimeout(lp); lp = null; }
-          if (e && lpStart && (Math.abs(e.clientX - lpStart.x) > 8 || Math.abs(e.clientY - lpStart.y) > 8)) {
-            if (lp) { clearTimeout(lp); lp = null; }
+        card.addEventListener('pointermove', function (e) {
+          if (lp && lpStart &&
+              (Math.abs(e.clientX - lpStart.x) > 8 ||
+               Math.abs(e.clientY - lpStart.y) > 8)) {
+            clearTimeout(lp); lp = null;
           }
+        });
+        function cancelLp() {
+          if (lp) { clearTimeout(lp); lp = null; }
         }
         card.addEventListener('pointerup', cancelLp);
-        card.addEventListener('pointermove', cancelLp);
         card.addEventListener('pointercancel', cancelLp);
+        // Belt-and-braces: if the click still tries to fire on the anchor
+        // after a long-press triggered edit mode, kill it here.
+        card.addEventListener('click', function (e) {
+          if (lpFired) {
+            e.preventDefault();
+            e.stopPropagation();
+            lpFired = false;
+          }
+        }, true);
       }
 
       // Expose to outer addOrRestore logic
@@ -2684,21 +2776,8 @@
           localStorage.setItem('cloaked.dashboard.order.v1', JSON.stringify(all));
         } catch (err) {}
       }
-      // Restore saved order
-      try {
-        var savedOrder = (JSON.parse(localStorage.getItem('cloaked.dashboard.order.v1') || '{}'))[view];
-        if (savedOrder && savedOrder.length) {
-          var parent = dashboard;
-          // find the insertion anchor: the first card[data-card-id] in source order
-          var firstCard = dashboard.querySelector('.card[data-card-id]');
-          if (firstCard) {
-            savedOrder.forEach(function (id) {
-              var c = dashboard.querySelector('.card[data-card-id="' + id + '"]');
-              if (c) parent.insertBefore(c, dashboard.querySelector('.add-card') || null);
-            });
-          }
-        }
-      } catch (err) {}
+      // (Order restoration is deferred until after newly-added widgets are
+      // re-created below, so they participate in the saved order too.)
 
       // Edit toggle
       function setEditing(on) {
@@ -2722,6 +2801,35 @@
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAddPage(view); }
         });
       }
+    });
+
+    // === After all dashboards are wired ===
+    // 1) Restore widgets the user previously added via the catalog so they
+    //    don't vanish after a page reload.
+    document.querySelectorAll('[data-view-content]').forEach(function (v) {
+      var view = v.dataset.viewContent;
+      getAdded(view).forEach(function (widgetId) {
+        var widget = addPage.querySelector('[data-add-id="' + widgetId + '"]');
+        if (widget) addOrRestore(view, widgetId, widget, true /* skipAnim */);
+      });
+    });
+
+    // 2) Restore saved drag-reorder order. Runs *after* the added widgets
+    //    are present so they get sorted into the right slot.
+    document.querySelectorAll('[data-view-content]').forEach(function (v) {
+      var view = v.dataset.viewContent;
+      var dashboard = v.querySelector('.dashboard');
+      if (!dashboard) return;
+      try {
+        var savedOrder = (JSON.parse(localStorage.getItem('cloaked.dashboard.order.v1') || '{}'))[view];
+        if (savedOrder && savedOrder.length) {
+          var addCardAnchor = dashboard.querySelector('.add-card') || null;
+          savedOrder.forEach(function (id) {
+            var c = dashboard.querySelector('.card[data-card-id="' + id + '"]');
+            if (c) dashboard.insertBefore(c, addCardAnchor);
+          });
+        }
+      } catch (err) {}
     });
   })();
 </script>
