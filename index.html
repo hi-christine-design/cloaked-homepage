@@ -809,75 +809,128 @@
     color: var(--ct-text-secondary);
   }
 
-  /* === EDIT DASHBOARD MODE (iOS jiggle) === */
-  @keyframes jiggle-a {
-    0%, 100% { transform: rotate(-0.55deg) translateY(-0.4px); }
-    50%      { transform: rotate(0.55deg)  translateY(0.4px); }
-  }
-  @keyframes jiggle-b {
-    0%, 100% { transform: rotate(0.55deg)  translateY(0.4px); }
-    50%      { transform: rotate(-0.55deg) translateY(-0.4px); }
-  }
+  /* === EDIT DASHBOARD MODE (iOS Settings — compact list) === */
   .dashboard .card,
   .dashboard .add-card {
     position: relative;
-    will-change: transform;
   }
-  .dashboard.is-editing .card,
-  .dashboard.is-editing .add-card {
-    animation: jiggle-a 0.34s linear infinite;
-    transform-origin: center center;
-  }
-  .dashboard.is-editing .card:nth-of-type(even),
-  .dashboard.is-editing .add-card:nth-of-type(even) {
-    animation-name: jiggle-b;
-  }
-  .dashboard.is-editing .card:nth-of-type(3n)   { animation-delay: -0.05s; }
-  .dashboard.is-editing .card:nth-of-type(3n+1) { animation-delay: -0.16s; }
-  .dashboard.is-editing .card:nth-of-type(3n+2) { animation-delay: -0.27s; }
-
-  /* While editing, suppress card link navigation but keep badges tappable */
+  /* While editing, suppress card link navigation */
   .dashboard.is-editing a.card { pointer-events: none; }
-  .dashboard.is-editing .edit-badge { pointer-events: auto; }
 
-  /* Let the minus badge sit outside the card edge.
-     Cards normally clip with overflow:hidden — turn that off in edit mode. */
-  .dashboard.is-editing .card { overflow: visible; }
-  /* Keep clipping during the collapse animation so contents don't leak */
-  .dashboard .card.is-removing { overflow: hidden; }
+  /* === Three-phase choreography ===
+     ENTER  (Edit pressed):
+       0-160ms   card-body fades out
+       160-460ms card height collapses to 60px
+       460-720ms compact row reveals
 
-  /* Minus badge in top-left of each card */
-  .edit-badge {
-    position: absolute;
-    top: -8px; left: -8px;
-    width: 26px; height: 26px;
-    border-radius: 50%;
-    background: var(--ct-color-white);
-    color: rgba(20,20,16,0.55);
-    border: none;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    z-index: 10;
-    padding: 0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(20,20,16,0.08);
+     EXIT  (Save pressed):
+       0-160ms   compact row fades out
+       160-460ms card expands back
+       460-720ms card-body fades back in
+     ============================================ */
+
+  /* Card height — phase 2 (delayed after content fades) */
+  .dashboard .card {
+    transition: max-height 300ms cubic-bezier(0.22, 1, 0.36, 1) 160ms;
+  }
+  .dashboard.is-editing .card {
+    max-height: 60px;
+    overflow: hidden;
+  }
+
+  /* Expanded content — phase 1 entering / phase 3 exiting */
+  .dashboard .card .card-body,
+  .dashboard .card .card-link {
+    transition: opacity 160ms ease;     /* fast fade-out entering edit */
+  }
+  .dashboard.is-editing .card .card-body,
+  .dashboard.is-editing .card .card-link {
     opacity: 0;
-    transform: scale(0);
-    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1),
-                opacity 180ms ease,
-                background-color 120ms ease;
-    -webkit-tap-highlight-color: transparent;
+    pointer-events: none;
   }
-  .edit-badge::before {
-    content: '';
-    width: 12px; height: 1.75px;
-    background: currentColor;
-    border-radius: 1px;
+  .dashboard:not(.is-editing) .card .card-body,
+  .dashboard:not(.is-editing) .card .card-link {
+    transition: opacity 240ms ease 460ms; /* delayed reveal exiting edit */
   }
-  .dashboard.is-editing .edit-badge {
+
+  /* Compact row — phase 3 entering / phase 1 exiting */
+  .compact-row {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--ct-spacing-12);
+    padding: 0 var(--ct-spacing-16);
+    background: var(--ct-bkgd-02);
+    border-radius: 16px;
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.96);
+    transform-origin: center;
+    transition: opacity 160ms ease,
+                transform 200ms ease;   /* fast fade-out exiting edit */
+    z-index: 1;
+  }
+  .dashboard.is-editing .compact-row {
     opacity: 1;
+    pointer-events: auto;
     transform: scale(1);
+    transition: opacity 260ms ease 460ms,
+                transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1) 460ms;
   }
-  .edit-badge:active { transform: scale(0.85); background: #f5f4f0; }
+
+  /* === Drag to reorder === */
+  .dashboard.is-editing .card {
+    transition: max-height 300ms cubic-bezier(0.22, 1, 0.36, 1) 160ms,
+                transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .dashboard .card.is-dragging {
+    z-index: 100;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(20,20,16,0.1);
+    transition: none !important;
+    cursor: grabbing;
+  }
+  .dashboard .card.is-dragging .compact-handle { cursor: grabbing; }
+  .dashboard .card.is-dragging .compact-row {
+    background: var(--ct-bkgd-02);
+  }
+  .compact-handle {
+    width: 24px; height: 24px;
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(20,20,16,0.45);
+    flex-shrink: 0;
+    cursor: grab;
+    touch-action: none;
+  }
+  .compact-handle svg { width: 16px; height: 12px; }
+  .compact-title {
+    flex: 1;
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .compact-remove {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--ct-color-black-05);
+    color: rgba(20,20,16,0.55);
+    display: flex; align-items: center; justify-content: center;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 140ms ease, transform 140ms ease;
+  }
+  .compact-remove:active { background: rgba(20,20,16,0.12); transform: scale(0.9); }
+  .compact-remove svg { width: 12px; height: 12px; }
+
+  /* The earlier corner-minus badge is unused in compact mode */
+  .edit-badge { display: none !important; }
 
   /* Card removal animation (collapses height + scales down) */
   .dashboard .card.is-removing {
@@ -949,110 +1002,471 @@
     margin-left: auto; margin-right: auto;
   }
 
-  /* === BOTTOM SHEET (Add to dashboard) === */
-  .sheet-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(20,20,16,0.42);
-    z-index: 2000;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 240ms cubic-bezier(0.22, 1, 0.36, 1);
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
-  }
-  .sheet-backdrop.is-open { opacity: 1; pointer-events: auto; }
-  .sheet {
+  /* === ADD TO DASHBOARD PAGE (full-screen, slides up) ===
+     Tokens from Figma 2298:9421:
+       Title: Simula 24px, line-height 1 (h2 serif)
+       Section title: SF Pro Regular 16px
+       Card title: SF Pro Display Medium 15px
+       Big number: SF Pro Display Regular 48px
+       Search: 49px height, 300px radius, white bg, 16px secondary text */
+  .add-page {
     position: fixed;
-    left: 0; right: 0; bottom: 0;
-    z-index: 2001;
-    background: var(--ct-bkgd-02);
-    border-radius: 24px 24px 0 0;
-    padding: 10px var(--ct-spacing-20) max(env(safe-area-inset-bottom, 0px), var(--ct-spacing-24));
-    transform: translateY(110%);
-    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
-    max-height: 76vh;
-    overflow-y: auto;
-    box-shadow: 0 -8px 40px rgba(0,0,0,0.25);
-    touch-action: pan-y;
-  }
-  .sheet.is-open { transform: translateY(0); }
-  .sheet-grabber {
-    width: 36px; height: 4px;
-    background: rgba(20,20,16,0.2);
-    border-radius: 2px;
-    margin: 0 auto var(--ct-spacing-16);
-  }
-  .sheet-title {
-    font-family: var(--ct-font-sans);
-    font-size: var(--ct-text-body-size);
-    color: var(--ct-text-primary);
-    margin: 0 0 4px;
-    text-align: center;
-  }
-  .sheet-sub {
-    font-family: var(--ct-font-sans);
-    font-size: var(--ct-text-body-small-size);
-    color: var(--ct-text-secondary);
-    margin: 0 0 var(--ct-spacing-20);
-    text-align: center;
-  }
-  .sheet-empty {
-    text-align: center;
-    padding: 32px var(--ct-spacing-20) var(--ct-spacing-24);
-    color: var(--ct-text-secondary);
-    font-family: var(--ct-font-sans);
-    font-size: var(--ct-text-body-small-size);
-    line-height: 1.45;
-  }
-  .sheet-list { display: flex; flex-direction: column; gap: 8px; }
-  .sheet-item {
-    display: flex; align-items: center; gap: var(--ct-spacing-12);
-    padding: 14px var(--ct-spacing-16);
-    background: var(--ct-bkgd-01);
-    border-radius: 14px;
-    cursor: pointer;
-    border: none;
+    top: 0; left: 50%;
     width: 100%;
-    text-align: left;
+    max-width: 480px;
+    height: 100%;
+    height: 100dvh;
+    background: var(--ct-bkgd-01);
+    z-index: 9000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    transform: translate(-50%, 100%);
+    transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
     font-family: var(--ct-font-sans);
+    visibility: hidden;
+  }
+  .add-page.is-open {
+    transform: translate(-50%, 0);
+    visibility: visible;
+  }
+  @media (max-width: 480px) {
+    .add-page { max-width: 100%; }
+  }
+
+  /* Header — absolute coordinates from Figma:
+     Title top-edge ~102px, Close top ~99px (text top edges) */
+  .add-page-header {
+    position: relative;
+    height: calc(env(safe-area-inset-top, 0px) + 138px);
+    min-height: 138px;
+  }
+  .add-page-title {
+    position: absolute;
+    left: var(--ct-spacing-20);
+    top: calc(env(safe-area-inset-top, 0px) + 102px);
+    font-family: var(--ct-font-serif);
+    font-weight: 400;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: 0.005em;
+    color: var(--ct-text-primary);
+    margin: 0;
+  }
+  .add-page-close {
+    position: absolute;
+    right: var(--ct-spacing-20);
+    top: calc(env(safe-area-inset-top, 0px) + 99px);
+    font-family: var(--ct-font-sans);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    background: none; border: none;
+    padding: 0; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
-                background-color 140ms ease;
   }
-  .sheet-item:active { transform: scale(0.985); background: var(--ct-color-black-05); }
-  .sheet-item-icon {
-    width: 36px; height: 36px;
-    border-radius: 10px;
+
+  /* Search bar — Figma top=181, height=49, radius=300, 16px placeholder at left=20 top=15 */
+  .add-page-search {
+    margin: 43px var(--ct-spacing-20) 0;
     background: var(--ct-bkgd-02);
+    border-radius: 300px;
+    height: 49px;
+    padding: 0 var(--ct-spacing-20);
+    display: flex; align-items: center;
+    font-family: var(--ct-font-sans);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.3;
+    color: #84827E;
+  }
+
+  /* Sections:
+     - First titled section: 49px from search bottom (Figma 279-230)
+     - Subsequent titled sections: ~48px from previous row bottom
+     - No-title sections (Call & Message, Mailbox, etc): ~9px gap */
+  .add-page-section {
+    padding: 0 var(--ct-spacing-20);
+    margin-top: 39px;     /* + 9px row margin-bottom = 48px gap */
+  }
+  .add-page-section:first-of-type { margin-top: 49px; }
+  .add-page-section.no-title { margin-top: 0; }   /* row margin-bottom 9px does the gap */
+  .add-page-section-title {
+    font-family: var(--ct-font-sans);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--ct-color-black);
+    margin: 0 0 var(--ct-spacing-16);
+  }
+  .add-page-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+    margin-bottom: 9px;
+  }
+  .add-page-row:last-child { margin-bottom: 0; }
+  .add-page-row.single { grid-template-columns: 1fr; margin-top: 10px; }
+  .add-page-row.single:first-child { margin-top: 0; }
+
+  /* Card base — Figma small cards are 200px tall, white bg, 16px radius.
+     Children use absolute positioning to match Figma coordinates exactly. */
+  .add-widget {
+    background: var(--ct-color-white);
+    border-radius: 16px;
+    height: 200px;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 140ms ease;
+    border: none;
+    text-align: left;
+    width: 100%;
+    font-family: var(--ct-font-sans);
+  }
+  .add-widget:active { transform: scale(0.98); }
+  .add-widget.tall { height: 350px; }
+  .add-widget.beige { background: #DEDAC7; }
+
+  /* Title — Figma top=16 left=16, SF Pro Display Medium 15px, line-height 1, black */
+  .add-widget-title {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    font-weight: 500;
+    font-size: 15px;
+    line-height: 1;
+    color: #000000;
+    margin: 0;
+  }
+
+  /* Big number — Figma center y=64; with line-height ~normal, visible text top ≈ 35 */
+  .add-widget-num {
+    position: absolute;
+    top: 35px;
+    left: 16px;
+    right: 16px;
+    font-weight: 400;
+    font-size: 48px;
+    line-height: 1.2;
+    color: #000000;
+    letter-spacing: -0.96px;
+    margin: 0;
+  }
+  .add-widget-num .unit {
+    font-size: 24px;
+    color: #000000;
+    margin-left: 0;
+  }
+
+  /* Body copy (Authenticator) — Figma 16px regular black, top ~31% from card top */
+  .add-widget-body {
+    position: absolute;
+    left: 16px;
+    right: 14px;
+    top: 62px;
+    font-size: 16px;
+    line-height: 1;
+    color: #000000;
+    letter-spacing: 0.08px;
+    margin: 0;
+  }
+
+  /* Pill "● Active" — Figma top=160 left=15 width=145 height=24, bg #E8E8E8, content centered */
+  .add-widget-pill {
+    position: absolute;
+    bottom: 16px;
+    left: 15px;
+    right: 15px;
+    height: 24px;
+    border-radius: 50px;
+    background: #E8E8E8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 12px;
+    line-height: 1;
+    color: #000000;
+    padding: 0;
+  }
+  .add-widget-pill::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--ct-status-success-solid);
     flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center;
-    color: var(--ct-text-primary);
-    box-shadow: 0 0 0 0.5px var(--ct-divider);
   }
-  .sheet-item-icon svg { width: 18px; height: 18px; }
-  .sheet-item-text { flex: 1; min-width: 0; }
-  .sheet-item-name {
-    display: block;
-    font-size: var(--ct-text-body-size);
-    line-height: 1.3;
-    color: var(--ct-text-primary);
+
+  /* Line chart — Figma top=115 left=-9 width=185 height=56 (extends past card edges) */
+  .add-widget-chart {
+    position: absolute;
+    left: -9px;
+    top: 115px;
+    width: 185px;
+    height: 56px;
+    pointer-events: none;
   }
-  .sheet-item-desc {
-    display: block;
-    font-size: var(--ct-text-body-small-size);
-    line-height: 1.3;
-    color: var(--ct-text-secondary);
-    margin-top: 2px;
+
+  /* Bar chart — Figma top=121 left=21 width=133 height=64 */
+  .add-widget-bars {
+    position: absolute;
+    top: 121px;
+    left: 21px;
+    width: 133px;
+    height: 64px;
+    display: flex; align-items: flex-end; gap: 3px;
   }
-  .sheet-item-add {
-    width: 28px; height: 28px;
+  .add-widget-bars span {
+    flex: 1;
+    background: #000000;
+    border-radius: 1px;
+  }
+
+  /* Avatar row — Figma top=140 left=16 gap=4.4 size=40 (last avatar partly overflows by ~17px) */
+  .add-widget-avatars {
+    position: absolute;
+    top: 140px;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    gap: 4.4px;
+  }
+  .add-avatar {
+    width: 40px; height: 40px;
     border-radius: 50%;
-    background: var(--ct-brand);
-    color: #fff;
+    flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    overflow: hidden;
+  }
+  .add-avatar.amazon { background: #FF9900; }
+  .add-avatar.amazon::after { content: 'a'; font-family: Georgia, serif; font-size: 22px; font-weight: 700; color: #fff; }
+  .add-avatar.redfin { background: #C82021; font-size: 13px; }
+  .add-avatar.redfin::after { content: 'Redfin'; font-family: var(--ct-font-sans); font-size: 9px; font-weight: 700; letter-spacing: -0.3px; }
+  .add-avatar.shop { background: var(--ct-monitoring); }
+  .add-avatar.shop::after { content: '@'; font-weight: 600; font-size: 16px; }
+  .add-avatar.gen-1 { background: linear-gradient(135deg,#7c4dff,#536dfe); }
+  .add-avatar.gen-2 { background: linear-gradient(135deg,#ff9800,#f44336); }
+  .add-avatar.gen-3 { background: linear-gradient(135deg,#4caf50,#009688); }
+  .add-avatar.gen-4 { background: linear-gradient(135deg,#e91e63,#9c27b0); }
+  .add-avatar.gen-5 { background: linear-gradient(135deg,#ff5722,#ff9800); }
+  .add-avatar.tinder { background: #fd5068; }
+  .add-avatar.tinder::after { content: '🔥'; font-size: 18px; }
+  .add-avatar.match { background: #5b1a7c; }
+  .add-avatar.match::after { content: 'm'; font-family: Georgia, serif; font-style: italic; font-size: 22px; color: #fff; }
+
+  /* List card (Call & Message, Mailbox) — Figma 353×350.
+     Title at top=19 left=56, icon at top=17 left=23 size=24. */
+  .add-widget.list .add-widget-title {
+    position: absolute;
+    top: 19px;
+    left: 56px;
+    right: 16px;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 1;
+    margin: 0;
+    color: #000000;
+  }
+  .add-widget.list .add-widget-list-icon {
+    position: absolute;
+    top: 17px;
+    left: 23px;
+    width: 24px;
+    height: 24px;
+    color: #000000;
+  }
+  .add-widget.list .add-widget-list-icon svg { width: 24px; height: 24px; }
+  .add-list-items {
+    position: absolute;
+    top: 62px; left: 0; right: 0; bottom: 48px;
+    padding: 0;
+  }
+  .add-list-item {
+    position: absolute;
+    left: 16px; right: 16px;
+    height: 88px;
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 0.5px solid var(--ct-divider);
+  }
+  .add-list-item:nth-of-type(1) { top: 0; }
+  .add-list-item:nth-of-type(2) { top: 88px; }
+  .add-list-item:nth-of-type(3) { top: 176px; border-bottom: none; }
+  .add-list-icon {
+    width: 40px; height: 40px; border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 14px; font-weight: 500;
+    overflow: hidden;
+  }
+  .add-list-icon svg { width: 20px; height: 20px; }
+  .add-list-icon.lulu       { background: var(--ct-monitoring); }
+  .add-list-icon.amazon-orange { background: #FF9900; color: #fff; font-family: Georgia, serif; font-size: 22px; font-weight: 700; line-height: 1; }
+  .add-list-icon.redfin-red    { background: #C82021; color: #fff; font-size: 9px; font-weight: 700; letter-spacing: -0.3px; }
+  .add-list-icon.green         { background: #2ED36F; }
+  .add-list-icon.dating-pink   { background: linear-gradient(135deg,#FFB6C1,#FF8FA3); }
+  .add-list-icon.dating-pink::after { content: ''; width: 16px; height: 16px; background: #fff; border-radius: 50%; opacity: 0.5; }
+  .add-list-icon.spam          { background: var(--ct-monitoring); }
+  .add-list-text { flex: 1; min-width: 0; }
+  .add-list-name {
+    font-size: 16px;
+    line-height: 1;
+    color: var(--ct-color-black);
+    margin: 0;
+  }
+  .add-list-sub {
+    font-size: 14px;
+    line-height: 1;
+    color: var(--ct-color-black);
+    opacity: 0.5;
+    margin: 6px 0 0;
+    white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .add-list-meta {
+    font-size: 14px;
+    color: var(--ct-color-black);
+    opacity: 0.5;
     flex-shrink: 0;
   }
-  .sheet-item-add svg { width: 14px; height: 14px; }
+  /* "See all" link — Figma bottom:0, py-20, border-top divider, 12px regular center */
+  .add-widget-see-all {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 20px 0;
+    border-top: 0.5px solid var(--ct-divider);
+    text-align: center;
+    font-family: var(--ct-font-sans);
+    font-weight: 400;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    letter-spacing: 0.06px;
+  }
+
+  /* Widget "already on dashboard" marker */
+  .add-widget.is-on-dashboard { opacity: 0.55; }
+  .add-widget.is-on-dashboard::after {
+    content: '✓ Added';
+    position: absolute;
+    top: 12px; right: 12px;
+    background: var(--ct-status-success-solid);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 999px;
+    line-height: 1.2;
+    z-index: 2;
+  }
+
+  /* VPN — full width (353), 200 tall. Title left=16 top=16, "Off" top=46 (45 +1).
+     Toggle bottom=16 left=16. Map at right=14 top=16 size=165x172 (occupies right half). */
+  .add-widget.vpn { width: 100%; }
+  .add-widget.vpn .add-widget-title { width: 50%; }
+  .add-widget.vpn .add-widget-num   { width: 50%; }
+  .add-widget-vpn-toggle {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    width: 44px;
+    height: 24px;
+    border-radius: 50px;
+    background: #D9D9D9;
+    display: flex;
+    align-items: center;
+    padding: 0 2px;
+  }
+  .add-widget-vpn-toggle::after {
+    content: '';
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .add-widget-vpn-map {
+    position: absolute;
+    top: 16px;
+    right: 14px;
+    width: 165px;
+    height: 172px;
+    border-radius: 16px;
+    background: #EDECE5;
+    overflow: hidden;
+  }
+  .add-widget-vpn-map::before,
+  .add-widget-vpn-map::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    background: var(--ct-monitoring);
+    box-shadow:
+      40px 25px 0 var(--ct-monitoring),
+      80px -10px 0 var(--ct-monitoring),
+      20px 80px 0 var(--ct-monitoring),
+      90px 60px 0 var(--ct-monitoring),
+      55px 100px 0 var(--ct-monitoring);
+    width: 6px; height: 6px;
+    top: 40px; left: 35px;
+    opacity: 0.6;
+  }
+
+  /* Cloaked Pay — Figma: stripes at top=104/133/166 from card top, each 150×64, radius 6.
+     Title also sits 3px lower (top=19) per Figma component. */
+  .add-widget[data-add-id="pay"] .add-widget-title { top: 19px; }
+  .add-widget-cards {
+    position: absolute;
+    top: 104px;
+    left: 13px;
+    width: 150px;
+  }
+  .add-widget-cards > div {
+    position: absolute;
+    width: 150px;
+    height: 64px;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .add-widget-cards .pay-1 { background: #F56600; top: 0; }
+  .add-widget-cards .pay-2 { background: #1ED760; top: 29px; }
+  .add-widget-cards .pay-3 { background: linear-gradient(295deg, #39383C 81.5%, #FF550C 116%); top: 62px; }
+  .add-widget-cards > div::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px;
+    width: 22px; height: 14px;
+    background: rgba(255,255,255,0.65);
+    border-radius: 3px;
+  }
+
+  /* Authenticator (beige bkgd_label):
+     Title top=19 (9.5%), body top=62 (31%), small black dot icon at top:160 left:16 (80%/9.3%) */
+  .add-widget.beige { background: #DEDAC7; }
+  .add-widget.beige .add-widget-title { top: 19px; color: #000000; }
+  .add-widget.beige .add-widget-body { top: 62px; }
+  .add-widget-auth-icon {
+    position: absolute;
+    top: 160px;
+    left: 16px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--ct-color-grey-05);
+    color: var(--ct-color-grey-01);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .add-widget-auth-icon svg { width: 14px; height: 14px; }
+
+  /* Insurance — same as other small cards but number sits left/center */
+  .add-widget-num.insurance { letter-spacing: -0.96px; }
 
   /* === MOBILE: edge-to-edge, trim baked-in 54px ===
      Figma bakes ~54px of iOS status-bar space into the design's top padding.
@@ -1618,18 +2032,227 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- BOTTOM SHEET — Add to dashboard                              -->
+<!-- ADD TO DASHBOARD — full-screen widget gallery (Figma 2298:9421) -->
 <!-- ============================================================ -->
-<div class="sheet-backdrop" id="sheetBackdrop" aria-hidden="true"></div>
-<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
-  <div class="sheet-grabber" aria-hidden="true"></div>
-  <p class="sheet-title" id="sheetTitle">Add to dashboard</p>
-  <p class="sheet-sub">Tap a card to add it back.</p>
-  <div class="sheet-empty" id="sheetEmpty" style="display:none;">
-    All cards are already on your dashboard.<br>
-    Tap <em>Edit</em> to remove ones you don't need.
-  </div>
-  <div class="sheet-list" id="sheetList"></div>
+<div class="add-page" id="addPage" role="dialog" aria-modal="true" aria-labelledby="addPageTitle" aria-hidden="true">
+  <header class="add-page-header">
+    <h1 class="add-page-title" id="addPageTitle">Add to dashboard</h1>
+    <button class="add-page-close" type="button" id="addPageClose">Close</button>
+  </header>
+
+  <div class="add-page-search" aria-hidden="true">Search widgets</div>
+
+  <!-- Monitoring data -->
+  <section class="add-page-section">
+    <p class="add-page-section-title">Monitoring data</p>
+    <div class="add-page-row">
+      <button class="add-widget" type="button" data-add-id="exposure">
+        <p class="add-widget-title">Exposure removed</p>
+        <p class="add-widget-num">314</p>
+        <svg class="add-widget-chart" viewBox="0 0 185 56" preserveAspectRatio="none" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M0 42 Q 20 38, 40 32 T 90 18 T 185 6" stroke="#5936C1" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M0 48 Q 25 44, 50 38 T 100 26 T 185 14" stroke="#D78E20" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M0 52 Q 30 46, 60 42 T 110 32 T 185 22" stroke="#379AAD" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M0 38 Q 22 34, 44 26 T 95 12 T 185 2" stroke="#FF550C" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+      </button>
+      <button class="add-widget" type="button" data-add-id="darkweb">
+        <p class="add-widget-title">Dark web&nbsp;&nbsp;monitoring</p>
+        <p class="add-widget-num"><span>13</span><span class="unit"> events</span></p>
+        <span class="add-widget-pill">Active</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Block Spam -->
+  <section class="add-page-section">
+    <p class="add-page-section-title">Block Spam</p>
+    <div class="add-page-row">
+      <button class="add-widget" type="button" data-add-id="spam-calls">
+        <p class="add-widget-title">Blocked spam calls</p>
+        <p class="add-widget-num">24</p>
+        <div class="add-widget-bars" aria-hidden="true">
+          <span style="height:38%"></span><span style="height:62%"></span><span style="height:42%"></span>
+          <span style="height:78%"></span><span style="height:52%"></span><span style="height:88%"></span>
+          <span style="height:46%"></span><span style="height:65%"></span><span style="height:74%"></span>
+          <span style="height:36%"></span><span style="height:58%"></span><span style="height:92%"></span>
+          <span style="height:48%"></span><span style="height:68%"></span><span style="height:38%"></span>
+          <span style="height:82%"></span><span style="height:56%"></span><span style="height:72%"></span>
+          <span style="height:44%"></span><span style="height:88%"></span>
+        </div>
+      </button>
+      <button class="add-widget" type="button" data-add-id="spam-emails">
+        <p class="add-widget-title">Blocked spam emails</p>
+        <p class="add-widget-num">16</p>
+        <div class="add-widget-bars" aria-hidden="true">
+          <span style="height:42%"></span><span style="height:68%"></span><span style="height:48%"></span>
+          <span style="height:82%"></span><span style="height:56%"></span><span style="height:38%"></span>
+          <span style="height:72%"></span><span style="height:46%"></span><span style="height:84%"></span>
+          <span style="height:62%"></span><span style="height:34%"></span><span style="height:78%"></span>
+          <span style="height:58%"></span><span style="height:92%"></span><span style="height:42%"></span>
+          <span style="height:74%"></span><span style="height:46%"></span><span style="height:88%"></span>
+          <span style="height:54%"></span><span style="height:68%"></span>
+        </div>
+      </button>
+    </div>
+    <!-- VPN (full-width) -->
+    <div class="add-page-row single">
+      <button class="add-widget vpn" type="button" data-add-id="vpn">
+        <p class="add-widget-title">VPN</p>
+        <p class="add-widget-num">Off</p>
+        <span class="add-widget-vpn-toggle" aria-hidden="true"></span>
+        <span class="add-widget-vpn-map" aria-hidden="true"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Create Identity -->
+  <section class="add-page-section">
+    <p class="add-page-section-title">Create Identity</p>
+    <div class="add-page-row">
+      <button class="add-widget" type="button" data-add-id="numbers">
+        <p class="add-widget-title">Created Numbers</p>
+        <p class="add-widget-num">5</p>
+        <div class="add-widget-avatars" aria-hidden="true">
+          <span class="add-avatar gen-1"></span>
+          <span class="add-avatar gen-2"></span>
+          <span class="add-avatar gen-3"></span>
+          <span class="add-avatar gen-4"></span>
+        </div>
+      </button>
+      <button class="add-widget" type="button" data-add-id="emails">
+        <p class="add-widget-title">Created Emails</p>
+        <p class="add-widget-num">4</p>
+        <div class="add-widget-avatars" aria-hidden="true">
+          <span class="add-avatar gen-5"></span>
+          <span class="add-avatar gen-3"></span>
+          <span class="add-avatar gen-1"></span>
+          <span class="add-avatar gen-4"></span>
+        </div>
+      </button>
+    </div>
+  </section>
+
+  <!-- Call & Message (full-width list) -->
+  <section class="add-page-section no-title">
+    <button class="add-widget list tall" type="button" data-add-id="messages" style="width: 100%; display: block;">
+      <p class="add-widget-title">Call &amp; Message</p>
+      <span class="add-widget-list-icon" aria-hidden="true">
+        <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 5h12v8H5l-2 2V5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <div class="add-list-items">
+        <div class="add-list-item">
+          <span class="add-list-icon lulu"><svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 3h10l-1 5h-8z" stroke="#fff" stroke-width="1.4"/><path d="M5 8v6h8V8" stroke="#fff" stroke-width="1.4"/></svg></span>
+          <div class="add-list-text">
+            <p class="add-list-name">Shopping</p>
+            <p class="add-list-sub">Your Lululemon order is placed</p>
+          </div>
+        </div>
+        <div class="add-list-item">
+          <span class="add-list-icon dating-pink"></span>
+          <div class="add-list-text">
+            <p class="add-list-name">Voicemail-Leah on Hinge</p>
+            <p class="add-list-sub">Hey it's Leah, we matched on Hinge..</p>
+          </div>
+          <span class="add-list-meta">›</span>
+        </div>
+        <div class="add-list-item">
+          <span class="add-list-icon spam"><svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 2v6m0 3v.1" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="7" stroke="#fff" stroke-width="1.5"/></svg></span>
+          <div class="add-list-text">
+            <p class="add-list-name">Spam Blocked</p>
+            <p class="add-list-sub">573-235-2362</p>
+          </div>
+          <span class="add-list-meta">New jersy</span>
+        </div>
+      </div>
+      <div class="add-widget-see-all">See all</div>
+    </button>
+  </section>
+
+  <!-- Mailbox (full-width list) -->
+  <section class="add-page-section no-title">
+    <button class="add-widget list tall" type="button" data-add-id="mailbox" style="width: 100%; display: block;">
+      <p class="add-widget-title">Mailbox</p>
+      <span class="add-widget-list-icon" aria-hidden="true">
+        <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M2 5l7 5 7-5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <div class="add-list-items">
+        <div class="add-list-item">
+          <span class="add-list-icon amazon-orange">a</span>
+          <div class="add-list-text">
+            <p class="add-list-name">Amazon</p>
+            <p class="add-list-sub">Your package is delivered</p>
+          </div>
+        </div>
+        <div class="add-list-item">
+          <span class="add-list-icon redfin-red">Redfin</span>
+          <div class="add-list-text">
+            <p class="add-list-name">Redfin</p>
+            <p class="add-list-sub">Place drop! 2840 139 AVE se...</p>
+          </div>
+        </div>
+        <div class="add-list-item">
+          <span class="add-list-icon green"><svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="9" cy="9" r="6.5" stroke="#fff" stroke-width="1.4"/><text x="9" y="12" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="-apple-system, sans-serif">@</text></svg></span>
+          <div class="add-list-text">
+            <p class="add-list-name">Spam Email bloked</p>
+            <p class="add-list-sub">We helped a marketing firm add 1.7m ..</p>
+          </div>
+        </div>
+      </div>
+      <div class="add-widget-see-all">See all</div>
+    </button>
+  </section>
+
+  <!-- Cloaked Pay + Passwords -->
+  <section class="add-page-section no-title">
+    <div class="add-page-row">
+      <button class="add-widget" type="button" data-add-id="pay">
+        <p class="add-widget-title">Cloaked Pay</p>
+        <p class="add-widget-num">3</p>
+        <div class="add-widget-cards" aria-hidden="true">
+          <div class="pay-1"></div>
+          <div class="pay-2"></div>
+          <div class="pay-3"></div>
+        </div>
+      </button>
+      <button class="add-widget" type="button" data-add-id="passwords">
+        <p class="add-widget-title">Passwords</p>
+        <p class="add-widget-num">12</p>
+        <div class="add-widget-avatars" aria-hidden="true">
+          <span class="add-avatar gen-1"></span>
+          <span class="add-avatar gen-5"></span>
+          <span class="add-avatar gen-3"></span>
+          <span class="add-avatar gen-4"></span>
+        </div>
+      </button>
+    </div>
+  </section>
+
+  <!-- Authenticator + Insurance -->
+  <section class="add-page-section no-title" style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);">
+    <div class="add-page-row">
+      <button class="add-widget beige" type="button" data-add-id="auth">
+        <p class="add-widget-title">Authenticator</p>
+        <p class="add-widget-body">Get one-time codes to sign in securely</p>
+        <span class="add-widget-auth-icon" aria-hidden="true">
+          <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 1v6l4 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.4"/>
+          </svg>
+        </span>
+      </button>
+      <button class="add-widget" type="button" data-add-id="insurance">
+        <p class="add-widget-title">Insurance</p>
+        <p class="add-widget-num insurance">$1mil</p>
+        <span class="add-widget-pill">Active</span>
+      </button>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -1730,95 +2353,134 @@
       try { localStorage.setItem(STORE_KEY, JSON.stringify(all)); } catch (e) {}
     }
 
-    // ---- icons for sheet ----
-    var ICONS = {
-      risk: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3l8 4v5c0 4.5-3.4 8.5-8 9-4.6-.5-8-4.5-8-9V7l8-4z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 8v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-      actions: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 20V11M10 20V5M16 20v-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>',
-      activity: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12h4l3-7 4 14 3-7h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-      setup: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 13l4 4 10-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-    };
-    function iconFor(name) { return ICONS[name] || ICONS.actions; }
+    // ---- Add to dashboard page ----
+    var addPage = document.getElementById('addPage');
+    var addPageClose = document.getElementById('addPageClose');
+    var currentAddView = null;
+    var wireCardFns = {};   // view → wireCard(card)
 
-    // ---- bottom sheet ----
-    var backdrop = document.getElementById('sheetBackdrop');
-    var sheet    = document.getElementById('sheet');
-    var sheetList  = document.getElementById('sheetList');
-    var sheetEmpty = document.getElementById('sheetEmpty');
-
-    function openSheet(view) {
-      populateSheet(view);
-      backdrop.classList.add('is-open');
-      sheet.classList.add('is-open');
-      sheet.setAttribute('aria-hidden', 'false');
-      backdrop.setAttribute('aria-hidden', 'false');
+    function openAddPage(view) {
+      currentAddView = view;
+      addPage.classList.add('is-open');
+      addPage.setAttribute('aria-hidden', 'false');
+      refreshAddedMarkers(view);
+      try { addPage.scrollTop = 0; } catch (e) {}
       haptic(8);
     }
-    function closeSheet() {
-      backdrop.classList.remove('is-open');
-      sheet.classList.remove('is-open');
-      sheet.setAttribute('aria-hidden', 'true');
-      backdrop.setAttribute('aria-hidden', 'true');
+    function closeAddPage() {
+      addPage.classList.remove('is-open');
+      addPage.setAttribute('aria-hidden', 'true');
+      currentAddView = null;
     }
-    function populateSheet(view) {
-      var removed = getRemoved(view);
-      sheetList.innerHTML = '';
-      if (!removed.length) {
-        sheetEmpty.style.display = 'block';
-        sheetList.style.display = 'none';
-        return;
-      }
-      sheetEmpty.style.display = 'none';
-      sheetList.style.display = '';
-      removed.forEach(function (id) {
-        var card = document.querySelector('[data-view-content="' + view + '"] .card[data-card-id="' + id + '"]');
-        if (!card) return;
-        var item = document.createElement('button');
-        item.type = 'button';
-        item.className = 'sheet-item';
-        item.innerHTML =
-          '<span class="sheet-item-icon">' + iconFor(card.dataset.cardIcon) + '</span>' +
-          '<span class="sheet-item-text">' +
-            '<span class="sheet-item-name">' + (card.dataset.cardName || id) + '</span>' +
-            (card.dataset.cardDesc ? '<span class="sheet-item-desc">' + card.dataset.cardDesc + '</span>' : '') +
-          '</span>' +
-          '<span class="sheet-item-add" aria-hidden="true"><svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg></span>';
-        item.addEventListener('click', function () {
-          if (restoreFns[view]) restoreFns[view](card);
-          haptic(10);
-          populateSheet(view);
-          if (!getRemoved(view).length) closeSheet();
-        });
-        sheetList.appendChild(item);
+
+    if (addPageClose) addPageClose.addEventListener('click', closeAddPage);
+
+    // Map widget id → existing dashboard card id (where there's a meaningful match)
+    var WIDGET_TO_CARD = {
+      'exposure':    'risk',
+      'darkweb':     'risk',
+      'spam-calls':  'actions',
+      'spam-emails': 'actions',
+      'messages':    'activity',
+      'mailbox':     'activity'
+      // unmatched: numbers, emails, vpn, pay, passwords, auth, insurance — create new cards
+    };
+
+    // Mark widgets that are currently on the dashboard
+    function refreshAddedMarkers(view) {
+      if (!view) return;
+      var dashboard = document.querySelector('[data-view-content="' + view + '"] .dashboard');
+      if (!dashboard) return;
+      addPage.querySelectorAll('.add-widget').forEach(function (w) {
+        var widgetId = w.dataset.addId;
+        var cardId = WIDGET_TO_CARD[widgetId] || ('widget-' + widgetId);
+        var card = dashboard.querySelector('.card[data-card-id="' + cardId + '"]');
+        var onDashboard = !!card && card.style.display !== 'none';
+        w.classList.toggle('is-on-dashboard', onDashboard);
       });
     }
 
-    backdrop.addEventListener('click', closeSheet);
+    // Build a new dashboard card from a widget element
+    function createCardFromWidget(widget, widgetId) {
+      var titleEl = widget.querySelector('.add-widget-title');
+      var numEl   = widget.querySelector('.add-widget-num');
+      var bodyEl  = widget.querySelector('.add-widget-body');
+      var pillEl  = widget.querySelector('.add-widget-pill');
+      var title   = titleEl ? titleEl.textContent.trim() : widgetId;
 
-    // Drag the sheet down to close
-    var startY = null, dragging = false;
-    sheet.addEventListener('pointerdown', function (e) {
-      if (sheet.scrollTop > 0) return;
-      startY = e.clientY; dragging = true;
-    });
-    sheet.addEventListener('pointermove', function (e) {
-      if (!dragging || startY === null) return;
-      var dy = e.clientY - startY;
-      if (dy > 0) {
-        sheet.style.transition = 'none';
-        sheet.style.transform = 'translateY(' + dy + 'px)';
+      var card = document.createElement('div');
+      card.className = 'card widget-card';
+      card.dataset.cardId   = 'widget-' + widgetId;
+      card.dataset.cardName = title;
+      card.dataset.cardDesc = bodyEl ? bodyEl.textContent.trim() : '';
+      card.dataset.cardIcon = 'actions';
+
+      var html = '<div class="card-body">';
+      html += '<p class="actions-title">' + title + '</p>';
+      if (numEl) {
+        html += '<div class="actions-headline" style="margin-bottom:8px;">';
+        html +=   '<span class="actions-number">' + numEl.innerHTML + '</span>';
+        if (pillEl) {
+          html += '<span class="actions-pill" style="background:' +
+                  getComputedStyle(pillEl).backgroundColor + ';color:' +
+                  getComputedStyle(pillEl).color + ';">' + pillEl.textContent.trim() + '</span>';
+        }
+        html += '</div>';
+      } else if (bodyEl) {
+        html += '<p class="actions-note" style="margin-top:12px;">' + bodyEl.textContent.trim() + '</p>';
       }
-    });
-    function endDrag(e) {
-      if (!dragging) return;
-      dragging = false;
-      var dy = (e && e.clientY != null) ? e.clientY - startY : 0;
-      sheet.style.transition = '';
-      sheet.style.transform = '';
-      startY = null;
-      if (dy > 110) closeSheet();
+      html += '</div>';
+      card.innerHTML = html;
+      return card;
     }
-    sheet.addEventListener('pointerup', endDrag);
-    sheet.addEventListener('pointercancel', endDrag);
+
+    // Try to add (or restore) a widget to the dashboard
+    function addOrRestore(view, widgetId, widget) {
+      var dashboard = document.querySelector('[data-view-content="' + view + '"] .dashboard');
+      if (!dashboard) return false;
+
+      // Look for existing card by either mapped id OR widget-prefixed id
+      var mappedId = WIDGET_TO_CARD[widgetId] || ('widget-' + widgetId);
+      var card = dashboard.querySelector('.card[data-card-id="' + mappedId + '"]');
+
+      if (card) {
+        if (card.style.display === 'none') {
+          if (restoreFns[view]) restoreFns[view](card);
+          return true;
+        }
+        // already on dashboard — no-op
+        return false;
+      }
+
+      // Create a new card cloned from the widget
+      card = createCardFromWidget(widget, widgetId);
+      var addCardEl = dashboard.querySelector('.add-card');
+      if (addCardEl) dashboard.insertBefore(card, addCardEl);
+      else dashboard.appendChild(card);
+
+      if (wireCardFns[view]) wireCardFns[view](card);
+
+      // entry animation (same as restoreCard)
+      void card.offsetWidth;
+      card.classList.add('is-adding');
+      card.addEventListener('animationend', function onEnd() {
+        card.classList.remove('is-adding');
+        card.removeEventListener('animationend', onEnd);
+      });
+      // empty-state refresh
+      if (refreshEmptyFns[view]) refreshEmptyFns[view]();
+      return true;
+    }
+
+    addPage.querySelectorAll('.add-widget').forEach(function (w) {
+      w.addEventListener('click', function () {
+        var view = currentAddView;
+        if (!view) return;
+        var added = addOrRestore(view, w.dataset.addId, w);
+        haptic(added ? 14 : 8);
+        closeAddPage();
+      });
+    });
 
     // ---- per-dashboard wiring ----
     document.querySelectorAll('[data-view-content] .dashboard').forEach(function (dashboard) {
@@ -1874,36 +2536,37 @@
       }
       restoreFns[view] = restoreCard;
 
-      // Add minus badge to every card
-      dashboard.querySelectorAll('.card[data-card-id]').forEach(function (card) {
-        var badge = document.createElement('button');
-        badge.type = 'button';
-        badge.className = 'edit-badge';
-        badge.setAttribute('aria-label', 'Remove ' + (card.dataset.cardName || 'card') + ' from dashboard');
-        card.appendChild(badge);
-        badge.addEventListener('click', function (e) {
+      // Per-card wiring (compact row + remove + drag + long-press to edit).
+      // Extracted as a function so newly-added cards from the Add page
+      // can be wired the same way.
+      function wireCard(card) {
+        if (card.__wired) return;
+        card.__wired = true;
+
+        var row = document.createElement('div');
+        row.className = 'compact-row';
+        row.innerHTML =
+          '<span class="compact-handle" aria-label="Drag to reorder" role="button" tabindex="0">' +
+            '<svg viewBox="0 0 16 12" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+              '<path d="M2 3h12M2 9h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+            '</svg>' +
+          '</span>' +
+          '<span class="compact-title">' + (card.dataset.cardName || card.dataset.cardId) + '</span>' +
+          '<button type="button" class="compact-remove" aria-label="Remove ' + (card.dataset.cardName || 'card') + '">' +
+            '<svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+              '<path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>' +
+            '</svg>' +
+          '</button>';
+        card.appendChild(row);
+
+        row.querySelector('.compact-remove').addEventListener('click', function (e) {
           e.preventDefault(); e.stopPropagation();
           removeCard(card);
         });
-      });
 
-      // Edit toggle
-      function setEditing(on) {
-        dashboard.classList.toggle('is-editing', on);
-        if (editBtn) {
-          editBtn.textContent = on ? 'Done' : 'Edit';
-          editBtn.classList.toggle('is-editing', on);
-        }
-        haptic(on ? 12 : 6);
-      }
-      if (editBtn) {
-        editBtn.addEventListener('click', function () {
-          setEditing(!dashboard.classList.contains('is-editing'));
-        });
-      }
+        attachDrag(row.querySelector('.compact-handle'), card);
 
-      // Long-press a card to enter edit mode (iOS-style)
-      dashboard.querySelectorAll('.card[data-card-id]').forEach(function (card) {
+        // Long-press to enter edit mode
         var lp = null, lpStart = null;
         card.addEventListener('pointerdown', function (e) {
           if (dashboard.classList.contains('is-editing')) return;
@@ -1922,13 +2585,141 @@
         card.addEventListener('pointerup', cancelLp);
         card.addEventListener('pointermove', cancelLp);
         card.addEventListener('pointercancel', cancelLp);
-      });
+      }
 
-      // Add to dashboard → open sheet
+      // Expose to outer addOrRestore logic
+      wireCardFns[view] = wireCard;
+
+      // Wire all existing cards
+      dashboard.querySelectorAll('.card[data-card-id]').forEach(wireCard);
+
+      // --- Drag-to-reorder on .compact-handle ---
+      var drag = null;
+      function attachDrag(handle, card) {
+        handle.addEventListener('pointerdown', function (e) {
+          if (!dashboard.classList.contains('is-editing')) return;
+          e.preventDefault();
+          var visible = Array.prototype.filter.call(
+            dashboard.querySelectorAll('.card[data-card-id]'),
+            function (c) { return c.style.display !== 'none'; }
+          );
+          var startIndex = visible.indexOf(card);
+          if (startIndex < 0) return;
+          drag = {
+            card: card,
+            handle: handle,
+            startY: e.clientY,
+            startIndex: startIndex,
+            currentIndex: startIndex,
+            cards: visible,
+            slot: card.offsetHeight + 8 /* card margin-bottom */
+          };
+          card.classList.add('is-dragging');
+          haptic(10);
+          handle.setPointerCapture(e.pointerId);
+          handle.addEventListener('pointermove', dragMove);
+          handle.addEventListener('pointerup', dragEnd);
+          handle.addEventListener('pointercancel', dragEnd);
+        });
+      }
+      function dragMove(e) {
+        if (!drag) return;
+        var dy = e.clientY - drag.startY;
+        drag.card.style.transform = 'translateY(' + dy + 'px) scale(1.03)';
+        var maxIdx = drag.cards.length - 1;
+        var newIndex = Math.round(drag.startIndex + dy / drag.slot);
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex > maxIdx) newIndex = maxIdx;
+        if (newIndex !== drag.currentIndex) {
+          drag.currentIndex = newIndex;
+          haptic(6);
+        }
+        drag.cards.forEach(function (c, i) {
+          if (c === drag.card) return;
+          var offset = 0;
+          if (drag.startIndex < newIndex && i > drag.startIndex && i <= newIndex) offset = -drag.slot;
+          else if (drag.startIndex > newIndex && i >= newIndex && i < drag.startIndex) offset = drag.slot;
+          c.style.transform = offset ? 'translateY(' + offset + 'px)' : '';
+        });
+      }
+      function dragEnd(e) {
+        if (!drag) return;
+        var d = drag;
+        var newIndex = d.currentIndex;
+        var finalDy = (newIndex - d.startIndex) * d.slot;
+        d.card.style.transition = 'transform 240ms cubic-bezier(0.22, 1, 0.36, 1)';
+        d.card.style.transform = 'translateY(' + finalDy + 'px) scale(1)';
+        d.handle.removeEventListener('pointermove', dragMove);
+        d.handle.removeEventListener('pointerup', dragEnd);
+        d.handle.removeEventListener('pointercancel', dragEnd);
+        try { d.handle.releasePointerCapture(e.pointerId); } catch (err) {}
+        setTimeout(function () {
+          if (newIndex !== d.startIndex) {
+            var parent = d.card.parentNode;
+            var target = d.cards[newIndex];
+            if (newIndex > d.startIndex) {
+              parent.insertBefore(d.card, target.nextSibling);
+            } else {
+              parent.insertBefore(d.card, target);
+            }
+            saveOrder(view, parent);
+          }
+          d.cards.forEach(function (c) {
+            c.style.transition = '';
+            c.style.transform = '';
+          });
+          d.card.classList.remove('is-dragging');
+        }, 240);
+        haptic(12);
+        drag = null;
+      }
+      function saveOrder(viewName, parent) {
+        var ids = Array.prototype.map.call(
+          parent.querySelectorAll('.card[data-card-id]'),
+          function (c) { return c.dataset.cardId; }
+        );
+        try {
+          var all = JSON.parse(localStorage.getItem('cloaked.dashboard.order.v1') || '{}');
+          all[viewName] = ids;
+          localStorage.setItem('cloaked.dashboard.order.v1', JSON.stringify(all));
+        } catch (err) {}
+      }
+      // Restore saved order
+      try {
+        var savedOrder = (JSON.parse(localStorage.getItem('cloaked.dashboard.order.v1') || '{}'))[view];
+        if (savedOrder && savedOrder.length) {
+          var parent = dashboard;
+          // find the insertion anchor: the first card[data-card-id] in source order
+          var firstCard = dashboard.querySelector('.card[data-card-id]');
+          if (firstCard) {
+            savedOrder.forEach(function (id) {
+              var c = dashboard.querySelector('.card[data-card-id="' + id + '"]');
+              if (c) parent.insertBefore(c, dashboard.querySelector('.add-card') || null);
+            });
+          }
+        }
+      } catch (err) {}
+
+      // Edit toggle
+      function setEditing(on) {
+        dashboard.classList.toggle('is-editing', on);
+        if (editBtn) {
+          editBtn.textContent = on ? 'Save' : 'Edit';
+          editBtn.classList.toggle('is-editing', on);
+        }
+        haptic(on ? 12 : 6);
+      }
+      if (editBtn) {
+        editBtn.addEventListener('click', function () {
+          setEditing(!dashboard.classList.contains('is-editing'));
+        });
+      }
+
+      // Add to dashboard → open full-page widget gallery
       if (addBtn) {
-        addBtn.addEventListener('click', function () { openSheet(view); });
+        addBtn.addEventListener('click', function () { openAddPage(view); });
         addBtn.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSheet(view); }
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAddPage(view); }
         });
       }
     });
