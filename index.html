@@ -141,6 +141,14 @@
     display: flex; justify-content: space-between; align-items: center;
     padding: 27px 0 24px;
   }
+  /* While editing, pin the header so Done is always reachable. */
+  .dashboard.is-editing .dashboard-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--ct-bkgd-01);
+    padding-top: calc(env(safe-area-inset-top, 0px) + 16px);
+  }
   .dashboard-title {
     font-family: var(--ct-font-sans);
     font-size: var(--ct-text-body-size);
@@ -397,19 +405,29 @@
   }
 
   /* Add to dashboard */
+  /* Figma 2317:10740 — full-pill outline button, border 1px solid divider,
+     height 56, rounded-240, body-size text. Background transparent so it
+     reads as a CTA outline rather than a card. */
   .add-card {
-    background: var(--ct-bkgd-02);
-    border-radius: 16px;
-    padding: 24px 16px;
+    background: transparent;
+    border: 1px solid var(--ct-divider);
+    border-radius: 999px;
+    height: 56px;
+    padding: 0 var(--ct-spacing-20);
     text-align: center;
     font-family: var(--ct-font-sans);
     font-size: var(--ct-text-body-size);
-    line-height: 1.3;
-    color: var(--ct-text-secondary);
+    line-height: 1;
+    color: var(--ct-cta-secondary-text);
     cursor: pointer;
     width: 353px;
     max-width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 140ms ease;
   }
+  .add-card:active { background: rgba(11,11,10,0.04); }
 
   /* === ASK AI === */
   .ask-ai {
@@ -840,7 +858,7 @@
     color: var(--ct-text-secondary);
   }
 
-  /* === EDIT DASHBOARD MODE (iOS Settings — compact list) === */
+  /* === EDIT DASHBOARD MODE (Figma 2317-10725 — cards stay full-size) === */
   .dashboard .card,
   .dashboard .add-card {
     position: relative;
@@ -848,73 +866,37 @@
   /* While editing, suppress card link navigation */
   .dashboard.is-editing a.card { pointer-events: none; }
 
-  /* === Three-phase choreography ===
-     ENTER  (Edit pressed):
-       0-160ms   card-body fades out
-       160-460ms card height collapses to 60px
-       460-720ms compact row reveals
-
-     EXIT  (Save pressed):
-       0-160ms   compact row fades out
-       160-460ms card expands back
-       460-720ms card-body fades back in
-     ============================================ */
-
-  /* Card height — phase 2 (delayed after content fades) */
+  /* Cards do NOT collapse in edit mode. They stay full-size, no jiggle,
+     no compact rows. Removal is via the small × badge in top-left of
+     each card, added below. Drag-to-reorder still works via long-press
+     on the card body. */
   .dashboard .card {
-    transition: max-height 300ms cubic-bezier(0.22, 1, 0.36, 1) 160ms;
-  }
-  .dashboard.is-editing .card {
-    max-height: 60px;
-    overflow: hidden;
+    transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  /* Expanded content — phase 1 entering / phase 3 exiting */
-  .dashboard .card .card-body,
-  .dashboard .card .card-link {
-    transition: opacity 160ms ease;     /* fast fade-out entering edit */
-  }
-  .dashboard.is-editing .card .card-body,
-  .dashboard.is-editing .card .card-link {
-    opacity: 0;
-    pointer-events: none;
-  }
-  .dashboard:not(.is-editing) .card .card-body,
-  .dashboard:not(.is-editing) .card .card-link {
-    transition: opacity 240ms ease 460ms; /* delayed reveal exiting edit */
-  }
+  /* Legacy compact-row UI — kept in DOM for drag logic, hidden visually */
+  .compact-row { display: none !important; }
 
-  /* Compact row — phase 3 entering / phase 1 exiting */
-  .compact-row {
+  /* Small remove badge on each card while editing (top-left). */
+  .card-remove-badge {
     position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    gap: var(--ct-spacing-12);
-    padding: 0 var(--ct-spacing-16);
-    background: var(--ct-bkgd-02);
-    border-radius: 16px;
-    opacity: 0;
-    pointer-events: none;
-    transform: scale(0.96);
-    transform-origin: center;
-    transition: opacity 160ms ease,
-                transform 200ms ease;   /* fast fade-out exiting edit */
-    z-index: 1;
+    top: 8px; left: 8px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--ct-status-fail-solid);
+    color: #fff;
+    border: 2px solid var(--ct-bkgd-02);
+    display: none;
+    align-items: center; justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 10;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 120ms ease;
   }
-  .dashboard.is-editing .compact-row {
-    opacity: 1;
-    pointer-events: auto;
-    transform: scale(1);
-    transition: opacity 260ms ease 460ms,
-                transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1) 460ms;
-  }
-
-  /* === Drag to reorder === */
-  .dashboard.is-editing .card {
-    transition: max-height 300ms cubic-bezier(0.22, 1, 0.36, 1) 160ms,
-                transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
+  .card-remove-badge:active { transform: scale(0.9); }
+  .card-remove-badge svg { width: 10px; height: 10px; }
+  .dashboard.is-editing .card-remove-badge { display: flex; }
   .dashboard .card.is-dragging {
     z-index: 100;
     box-shadow: 0 12px 32px rgba(0,0,0,0.22), 0 0 0 0.5px rgba(20,20,16,0.1);
@@ -985,17 +967,19 @@
     100% { transform: scale(1);    opacity: 1; }
   }
 
-  /* Edit button while editing */
+  /* Edit / Done text link — per Figma, "Done" is the same text color as the
+     "Dashboard" title (no orange accent). */
   .dashboard-edit.is-editing {
-    color: var(--ct-brand);
-    font-weight: 500;
+    color: var(--ct-text-primary);
+    font-weight: 400;
   }
 
-  /* Add-card while editing — emphasised dashed dropzone look */
-  .dashboard.is-editing .add-card {
-    background: rgba(255,85,12,0.04);
-    border: 1px dashed rgba(255,85,12,0.4);
-    color: var(--ct-brand);
+  /* Hide hero + tabbar while editing so the dashboard takes over the
+     viewport, matching the Figma edit-mode design. */
+  body.is-editing .hero,
+  body.is-editing .tabbar,
+  body.is-editing .ask-ai {
+    display: none;
   }
 
   /* Dashboard empty state (when every card removed) */
@@ -1735,7 +1719,7 @@
     </div>
 
     <!-- Add to dashboard -->
-    <div class="add-card">+ Add to dashboard</div>
+    <div class="add-card">Add to dashboard</div>
   </section>
 
   <!-- ASK AI -->
@@ -2705,9 +2689,27 @@
       // Edit toggle
       function setEditing(on) {
         dashboard.classList.toggle('is-editing', on);
+        document.body.classList.toggle('is-editing', on);  // hide hero/tabbar
         if (editBtn) {
-          editBtn.textContent = on ? 'Save' : 'Edit';
+          editBtn.textContent = on ? 'Done' : 'Edit';
           editBtn.classList.toggle('is-editing', on);
+        }
+        // Make sure each card has a × remove badge (once)
+        if (on) {
+          dashboard.querySelectorAll('.card[data-card-id]').forEach(function (card) {
+            if (card.querySelector('.card-remove-badge')) return;
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'card-remove-badge';
+            b.setAttribute('aria-label', 'Remove from dashboard');
+            b.innerHTML = '<svg viewBox="0 0 10 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+            b.addEventListener('click', function (e) {
+              e.stopPropagation();
+              e.preventDefault();
+              if (typeof removeCard === 'function') removeCard(card);
+            });
+            card.appendChild(b);
+          });
         }
         haptic(on ? 12 : 6);
       }
