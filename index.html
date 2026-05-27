@@ -1437,21 +1437,11 @@
     letter-spacing: 0.06px;
   }
 
-  /* Widget "already on dashboard" marker */
-  .add-widget.is-on-dashboard { opacity: 0.55; }
-  .add-widget.is-on-dashboard::after {
-    content: '✓ Added';
-    position: absolute;
-    top: 12px; right: 12px;
-    background: var(--ct-status-success-solid);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 500;
-    padding: 4px 10px;
-    border-radius: 999px;
-    line-height: 1.2;
-    z-index: 2;
-  }
+  /* Widget already on the dashboard → fully hide from the catalog.
+     Row/section also hide if no widgets remain visible (propagated from JS). */
+  .add-widget.is-on-dashboard { display: none !important; }
+  .add-page-row.is-empty       { display: none !important; }
+  .add-page-section.is-empty   { display: none !important; }
 
   /* VPN — full width (353), 200 tall. Title left=16 top=16, "Off" top=46 (45 +1).
      Toggle bottom=16 left=16. Map at right=14 top=16 size=165x172 (occupies right half). */
@@ -2358,17 +2348,32 @@
       // unmatched: numbers, emails, vpn, pay, passwords, auth, insurance — create new cards
     };
 
-    // Mark widgets that are currently on the dashboard
+    // Hide widgets that are currently on the dashboard, then collapse any
+    // row / section that ends up with no remaining visible widgets.
     function refreshAddedMarkers(view) {
       if (!view) return;
       var dashboard = document.querySelector('[data-view-content="' + view + '"] .dashboard');
       if (!dashboard) return;
+
+      // 1) Per-widget: mark added widgets as hidden
       addPage.querySelectorAll('.add-widget').forEach(function (w) {
         var widgetId = w.dataset.addId;
         var cardId = WIDGET_TO_CARD[widgetId] || ('widget-' + widgetId);
         var card = dashboard.querySelector('.card[data-card-id="' + cardId + '"]');
         var onDashboard = !!card && card.style.display !== 'none';
         w.classList.toggle('is-on-dashboard', onDashboard);
+      });
+
+      // 2) Per-row: hide rows where every widget is added
+      addPage.querySelectorAll('.add-page-row').forEach(function (row) {
+        var anyVisible = !!row.querySelector('.add-widget:not(.is-on-dashboard)');
+        row.classList.toggle('is-empty', !anyVisible);
+      });
+
+      // 3) Per-section: hide sections where every widget is added
+      addPage.querySelectorAll('.add-page-section').forEach(function (section) {
+        var anyVisible = !!section.querySelector('.add-widget:not(.is-on-dashboard)');
+        section.classList.toggle('is-empty', !anyVisible);
       });
     }
 
