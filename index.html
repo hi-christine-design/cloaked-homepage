@@ -1048,6 +1048,131 @@
     .add-page { max-width: 100%; }
   }
 
+  /* === PREVIEW VIEW — slides in from the right when a widget is tapped ===
+     Per screen recording (g03 → g05/g06): tap widget → preview view shows
+     the widget enlarged with size dots + 'Add widget' button at bottom. */
+  .add-page-preview {
+    position: absolute;
+    inset: 0;
+    background: var(--ct-bkgd-01);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
+    visibility: hidden;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 99px);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
+  }
+  .add-page.in-preview .add-page-preview {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  /* When previewing, fade the underlying browse content (so it doesn't
+     scroll-flicker behind the preview). */
+  .add-page.in-preview .add-page-section,
+  .add-page.in-preview .add-page-search,
+  .add-page.in-preview .add-page-empty {
+    opacity: 0;
+    transition: opacity 200ms ease;
+  }
+
+  .preview-back {
+    position: absolute;
+    left: var(--ct-spacing-20);
+    top: calc(env(safe-area-inset-top, 0px) + 96px);
+    font-family: var(--ct-font-sans);
+    font-size: 20px;
+    line-height: 1;
+    color: var(--ct-text-primary);
+    background: none; border: none;
+    padding: 6px 10px 6px 0;
+    margin: 0;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    z-index: 2;
+  }
+  .preview-title {
+    margin: 0;
+    padding: 0 var(--ct-spacing-20) 0 56px;
+    font-family: var(--ct-font-sans);
+    font-weight: 400;
+    font-size: var(--ct-text-body-size);
+    line-height: 1.3;
+    color: var(--ct-text-primary);
+    flex-shrink: 0;
+    min-height: 24px;
+  }
+  .preview-stage {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--ct-spacing-20);
+    overflow: hidden;
+  }
+  .preview-card-wrap {
+    position: relative;
+    transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1),
+                height 320ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: width, height;
+  }
+  /* Size variants for the preview card wrapper (Lab S/M/L spec) */
+  .preview-card-wrap.size-S { width: 172px; height: 200px; }
+  .preview-card-wrap.size-M { width: 320px; height: 200px; }
+  .preview-card-wrap.size-L { width: 320px; height: 350px; }
+  /* The cloned widget fills its wrapper */
+  .preview-card-wrap .add-widget {
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* Page dots (size indicator) */
+  .preview-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 0 16px;
+    flex-shrink: 0;
+  }
+  .preview-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: rgba(11,11,10,0.18);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background-color 180ms ease, transform 180ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .preview-dot.active {
+    background: var(--ct-text-primary);
+    transform: scale(1.1);
+  }
+  .preview-dot[disabled] {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  /* Add widget button — full-width black pill */
+  .add-widget-btn {
+    margin: 0 var(--ct-spacing-20);
+    height: 56px;
+    border-radius: 999px;
+    border: none;
+    background: var(--ct-cta-primary-container);
+    color: var(--ct-cta-primary-text);
+    font-family: var(--ct-font-sans);
+    font-size: var(--ct-text-body-size);
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+    transition: opacity 140ms ease, transform 140ms ease;
+  }
+  .add-widget-btn:active { transform: scale(0.985); opacity: 0.92; }
+
   /* Header — absolute coordinates from Figma:
      Title top-edge ~102px, Close top ~99px (text top edges) */
   .add-page-header {
@@ -2069,6 +2194,21 @@
   <div class="add-page-empty" id="addPageEmpty" hidden>
     No widgets match <strong id="addPageEmptyQuery"></strong>.
   </div>
+
+  <!-- Preview view (slide-in from right when a widget is tapped) -->
+  <div class="add-page-preview" id="addPagePreview" aria-hidden="true">
+    <button class="preview-back" id="addPagePreviewBack" type="button" aria-label="Back to catalog">‹</button>
+    <h2 class="preview-title" id="addPagePreviewTitle">—</h2>
+    <div class="preview-stage">
+      <div class="preview-card-wrap size-S" id="addPagePreviewWrap"></div>
+    </div>
+    <div class="preview-dots" id="addPagePreviewDots" role="tablist" aria-label="Choose widget size">
+      <button class="preview-dot active" type="button" data-size="S" aria-label="Small size"></button>
+      <button class="preview-dot"        type="button" data-size="M" aria-label="Medium size"></button>
+      <button class="preview-dot"        type="button" data-size="L" aria-label="Large size"></button>
+    </div>
+    <button class="add-widget-btn" id="addWidgetBtn" type="button">Add widget</button>
+  </div>
 </div>
 
 <script>
@@ -2200,6 +2340,7 @@
     function closeAddPage() {
       document.body.classList.remove('add-open'); // restore version-toggle
       addPage.classList.remove('is-open');
+      addPage.classList.remove('in-preview');     // exit preview state if open
       addPage.setAttribute('aria-hidden', 'true');
       currentAddView = null;
       resetSearch();
@@ -2398,7 +2539,7 @@
     // Try to add (or restore) a widget to the dashboard.
     // skipAnim=true is used on init when restoring persisted widgets so we
     // don't show the spring-in animation for every saved card.
-    function addOrRestore(view, widgetId, widget, skipAnim) {
+    function addOrRestore(view, widgetId, widget, skipAnim, size) {
       var dashboard = document.querySelector('[data-view-content="' + view + '"] .dashboard');
       if (!dashboard) return false;
 
@@ -2407,6 +2548,7 @@
       var card = dashboard.querySelector('.card[data-card-id="' + mappedId + '"]');
 
       if (card) {
+        if (size) card.dataset.cardSize = size;
         if (card.style.display === 'none') {
           if (restoreFns[view]) restoreFns[view](card);
           if (mappedId.indexOf('widget-') === 0) recordAdded(view, widgetId);
@@ -2418,6 +2560,7 @@
 
       // Create a new card cloned from the widget
       card = createCardFromWidget(widget, widgetId);
+      if (size) card.dataset.cardSize = size;
       var addCardEl = dashboard.querySelector('.add-card');
       if (addCardEl) dashboard.insertBefore(card, addCardEl);
       else dashboard.appendChild(card);
@@ -2441,16 +2584,103 @@
       return true;
     }
 
-    addPage.querySelectorAll('.add-widget').forEach(function (w) {
-      w.addEventListener('click', function (e) {
-        // Stop this click from bubbling/propagating further before we
-        // also turn on the global suppressClicks flag for the transition.
-        e.stopPropagation();
+    // === Preview view state + wiring ===
+    // Per Figma 2347-16910 / 2347-18269 and screen recording: tapping a
+    // widget in the catalog opens a preview slide-in showing the widget at
+    // a chosen size (S/M/L). User taps "Add widget" to confirm. Cancel via
+    // the back chevron returns to the catalog.
+    var previewBack  = document.getElementById('addPagePreviewBack');
+    var previewWrap  = document.getElementById('addPagePreviewWrap');
+    var previewTitle = document.getElementById('addPagePreviewTitle');
+    var previewDots  = document.getElementById('addPagePreviewDots');
+    var addWidgetBtn = document.getElementById('addWidgetBtn');
+    var previewState = { widget: null, size: 'S' };
+    // Per-widget supported sizes (mirrors Lab CATALOG defaults).
+    var WIDGET_SIZES = {
+      'exposure':    { sizes: ['S','M','L'], default: 'S' },
+      'darkweb':     { sizes: ['S','M','L'], default: 'S' },
+      'spam-calls':  { sizes: ['S','M','L'], default: 'S' },
+      'spam-emails': { sizes: ['S','M'],     default: 'S' },
+      'vpn':         { sizes: ['S','M','L'], default: 'M' },
+      'numbers':     { sizes: ['S','M','L'], default: 'S' },
+      'emails':      { sizes: ['S','M'],     default: 'S' },
+      'messages':    { sizes: ['M','L'],     default: 'L' },
+      'mailbox':     { sizes: ['M','L'],     default: 'L' },
+      'pay':         { sizes: ['S','M'],     default: 'S' },
+      'passwords':   { sizes: ['S','M'],     default: 'S' },
+      'auth':        { sizes: ['S','M'],     default: 'S' },
+      'insurance':   { sizes: ['S','M','L'], default: 'S' }
+    };
+
+    function openPreview(widgetEl) {
+      var widgetId = widgetEl.dataset.addId;
+      var meta = WIDGET_SIZES[widgetId] || { sizes: ['S','M','L'], default: 'S' };
+      previewState.widget = widgetEl;
+      previewState.size = meta.default;
+      // Title from the widget's own .add-widget-title
+      var titleNode = widgetEl.querySelector('.add-widget-title');
+      previewTitle.textContent = titleNode ? titleNode.textContent : '';
+      // Clone the widget visual into the preview wrap
+      previewWrap.innerHTML = '';
+      var cloned = widgetEl.cloneNode(true);
+      cloned.classList.remove('is-on-dashboard', 'is-filtered-out');
+      cloned.removeAttribute('data-add-id');
+      previewWrap.appendChild(cloned);
+      applyPreviewSize(meta.default, meta);
+      addPage.classList.add('in-preview');
+      addPage.querySelector('#addPagePreview').setAttribute('aria-hidden', 'false');
+      haptic(8);
+    }
+    function closePreview() {
+      addPage.classList.remove('in-preview');
+      addPage.querySelector('#addPagePreview').setAttribute('aria-hidden', 'true');
+      // Defer state reset until slide-out finishes
+      setTimeout(function () {
+        previewState.widget = null;
+        previewWrap.innerHTML = '';
+      }, 380);
+    }
+    function applyPreviewSize(size, meta) {
+      previewState.size = size;
+      previewWrap.classList.remove('size-S', 'size-M', 'size-L');
+      previewWrap.classList.add('size-' + size);
+      // Sync dots
+      Array.prototype.forEach.call(previewDots.children, function (dot) {
+        var s = dot.dataset.size;
+        var supported = !meta || meta.sizes.indexOf(s) !== -1;
+        dot.classList.toggle('active', s === size);
+        dot.disabled = !supported;
+      });
+    }
+
+    if (previewBack) previewBack.addEventListener('click', closePreview);
+    if (previewDots) {
+      previewDots.addEventListener('click', function (e) {
+        var btn = e.target.closest('.preview-dot');
+        if (!btn || btn.disabled || !previewState.widget) return;
+        var meta = WIDGET_SIZES[previewState.widget.dataset.addId] ||
+                   { sizes: ['S','M','L'], default: 'S' };
+        applyPreviewSize(btn.dataset.size, meta);
+        haptic(6);
+      });
+    }
+    if (addWidgetBtn) {
+      addWidgetBtn.addEventListener('click', function () {
+        if (!previewState.widget) return;
         var view = currentAddView;
         if (!view) return;
-        var added = addOrRestore(view, w.dataset.addId, w);
+        var added = addOrRestore(view, previewState.widget.dataset.addId, previewState.widget, false, previewState.size);
         haptic(added ? 14 : 8);
+        closePreview();
         closeAddPage();
+      });
+    }
+
+    addPage.querySelectorAll('.add-widget').forEach(function (w) {
+      w.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (!currentAddView) return;
+        openPreview(w);
       });
     });
 
